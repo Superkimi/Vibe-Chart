@@ -9,7 +9,8 @@ export function CodePanel() {
   const diagram = useVibeChartStore(selectActiveDocument);
   const replaceActive = useVibeChartStore((state) => state.replaceActive);
   const generated = useMemo(() => toMermaid(diagram), [diagram]);
-  const [source, setSource] = useState(generated);
+  const [draftSource, setDraftSource] = useState<string | null>(null);
+  const source = draftSource ?? generated;
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -60,6 +61,7 @@ export function CodePanel() {
   const applyCode = () => {
     try {
       replaceActive(fromMermaid(source, diagram));
+      setDraftSource(null);
       setError("");
     } catch (applyError) {
       setError(
@@ -85,7 +87,12 @@ export function CodePanel() {
             <span>Code stays synchronized with the visual model.</span>
           </div>
           <div className="code-actions">
-            <button type="button" onClick={() => setSource(generated)}>
+            <button
+              type="button"
+              onClick={() => {
+                setDraftSource(null);
+              }}
+            >
               <ArrowClockwise size={14} />
               Reset
             </button>
@@ -99,7 +106,9 @@ export function CodePanel() {
           aria-label="Mermaid code"
           spellCheck={false}
           value={source}
-          onChange={(event) => setSource(event.target.value)}
+          onChange={(event) => {
+            setDraftSource(event.target.value);
+          }}
         />
         <footer>
           <span className={error ? "code-status error" : "code-status"}>

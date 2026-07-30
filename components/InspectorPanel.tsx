@@ -6,6 +6,7 @@ import {
   Diamond,
   Globe,
   HardDrives,
+  FlowArrow,
   Robot,
   Sparkle,
   Trash,
@@ -29,13 +30,21 @@ export function InspectorPanel() {
   const [tab, setTab] = useState<"design" | "ai">("ai");
   const diagram = useVibeChartStore(selectActiveDocument);
   const selectedNodeId = useVibeChartStore((state) => state.selectedNodeId);
+  const selectedEdgeId = useVibeChartStore((state) => state.selectedEdgeId);
   const updateSelectedNode = useVibeChartStore(
     (state) => state.updateSelectedNode,
   );
   const removeSelectedNode = useVibeChartStore(
     (state) => state.removeSelectedNode,
   );
+  const updateSelectedEdge = useVibeChartStore(
+    (state) => state.updateSelectedEdge,
+  );
+  const removeSelectedEdge = useVibeChartStore(
+    (state) => state.removeSelectedEdge,
+  );
   const selected = diagram.nodes.find((node) => node.id === selectedNodeId);
+  const selectedEdge = diagram.edges.find((edge) => edge.id === selectedEdgeId);
 
   return (
     <aside className="inspector-panel" aria-label="Diagram inspector">
@@ -59,7 +68,7 @@ export function InspectorPanel() {
         </button>
       </div>
       {tab === "ai" ? (
-        <AiPanel />
+        <AiPanel key={diagram.id} />
       ) : (
         <div className="properties-panel">
           {selected ? (
@@ -157,6 +166,61 @@ export function InspectorPanel() {
                 </label>
               ) : null}
             </>
+          ) : selectedEdge ? (
+            <>
+              <header className="properties-title">
+                <div>
+                  <strong>Selected connection</strong>
+                  <small>{selectedEdge.source} → {selectedEdge.target}</small>
+                </div>
+                <button
+                  type="button"
+                  className="icon-button danger"
+                  onClick={removeSelectedEdge}
+                  aria-label="Delete selected connection"
+                >
+                  <Trash size={16} />
+                </button>
+              </header>
+              <label>
+                Label
+                <input
+                  value={selectedEdge.label}
+                  onChange={(event) =>
+                    updateSelectedEdge({ label: event.target.value })
+                  }
+                  placeholder="request, publishes, retries…"
+                />
+              </label>
+              <fieldset>
+                <legend>Line style</legend>
+                <div className="shape-grid">
+                  {(["smoothstep", "straight", "bezier"] as const).map(
+                    (type) => (
+                      <button
+                        type="button"
+                        key={type}
+                        className={selectedEdge.type === type ? "is-active" : ""}
+                        onClick={() => updateSelectedEdge({ type })}
+                      >
+                        <FlowArrow size={16} />
+                        {type}
+                      </button>
+                    ),
+                  )}
+                </div>
+              </fieldset>
+              <label className="edge-toggle">
+                <input
+                  type="checkbox"
+                  checked={selectedEdge.animated}
+                  onChange={(event) =>
+                    updateSelectedEdge({ animated: event.target.checked })
+                  }
+                />
+                Animate direction
+              </label>
+            </>
           ) : (
             <div className="empty-properties">
               <Robot size={28} weight="duotone" />
@@ -169,4 +233,3 @@ export function InspectorPanel() {
     </aside>
   );
 }
-

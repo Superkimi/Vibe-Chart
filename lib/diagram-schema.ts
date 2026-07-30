@@ -50,12 +50,14 @@ export const diagramDocumentSchema = z
     title: z.string().min(1).max(100),
     kind: z.enum(diagramKinds),
     direction: z.enum(["LR", "TB"]).default("LR"),
+    revision: z.number().int().nonnegative().default(0),
     nodes: z.array(diagramNodeSchema).min(1).max(120),
     edges: z.array(diagramEdgeSchema).max(240),
-    updatedAt: z.string(),
+    updatedAt: z.string().datetime(),
   })
   .superRefine((diagram, ctx) => {
     const ids = new Set<string>();
+    const edgeIds = new Set<string>();
     for (const node of diagram.nodes) {
       if (ids.has(node.id)) {
         ctx.addIssue({
@@ -67,6 +69,14 @@ export const diagramDocumentSchema = z
       ids.add(node.id);
     }
     for (const edge of diagram.edges) {
+      if (ids.has(edge.id) || edgeIds.has(edge.id)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Duplicate graph id: ${edge.id}`,
+          path: ["edges"],
+        });
+      }
+      edgeIds.add(edge.id);
       if (!ids.has(edge.source) || !ids.has(edge.target)) {
         ctx.addIssue({
           code: "custom",
@@ -89,11 +99,12 @@ export function validateDiagram(input: unknown): DiagramDocument {
 }
 
 export function safeId(value: string, fallback = "node") {
-  const normalized = value
+  const normalize = (input: string) =>
+    input
     .trim()
     .replace(/[^A-Za-z0-9_-]+/g, "_")
-    .replace(/^([^A-Za-z])/, "n_$1")
     .replace(/_+/g, "_")
     .replace(/^_|_$/g, "");
-  return normalized || fallback;
+  const normalized = normalize(value) || normalize(fallback) || "node";
+  return /^[A-Za-z]/.test(normalized) ? normalized : `n_${normalized}`;
 }

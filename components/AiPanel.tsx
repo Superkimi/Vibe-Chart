@@ -10,6 +10,7 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { validateDiagram } from "@/lib/diagram-schema";
+import { layoutDiagram } from "@/lib/layout";
 import { selectActiveDocument, useVibeChartStore } from "@/lib/store";
 
 type Message = {
@@ -39,8 +40,9 @@ const quickPrompts = [
 
 export function AiPanel() {
   const diagram = useVibeChartStore(selectActiveDocument);
-  const replaceActive = useVibeChartStore((state) => state.replaceActive);
-  const autoLayout = useVibeChartStore((state) => state.autoLayout);
+  const replaceDocumentIfUnchanged = useVibeChartStore(
+    (state) => state.replaceDocumentIfUnchanged,
+  );
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -82,6 +84,7 @@ export function AiPanel() {
     event?.preventDefault();
     const text = prompt.trim();
     if (!text || pending) return;
+    const requestDiagram = structuredClone(diagram);
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: "user",
@@ -99,9 +102,10 @@ export function AiPanel() {
         body: JSON.stringify({
           ...settings,
           prompt: text,
-          diagram,
+          diagram: requestDiagram,
           history: nextMessages
             .filter((message) => message.id !== "welcome")
+            .slice(0, -1)
             .slice(-8)
             .map(({ role, content }) => ({ role, content })),
         }),
@@ -115,8 +119,20 @@ export function AiPanel() {
       if (!response.ok || !result.diagram) {
         throw new Error(result.error || result.detail || "AI edit failed.");
       }
-      replaceActive(validateDiagram(result.diagram));
-      window.setTimeout(() => autoLayout(), 0);
+      const prepared = layoutDiagram(validateDiagram(result.diagram));
+      const outcome = replaceDocumentIfUnchanged(
+        requestDiagram.id,
+        requestDiagram.revision ?? 0,
+        prepared,
+      );
+      if (outcome === "stale") {
+        throw new Error(
+          "The diagram changed while AI was working. Review your latest edits and send the request again.",
+        );
+      }
+      if (outcome === "missing") {
+        throw new Error("This diagram no longer exists.");
+      }
       setMessages((current) => [
         ...current,
         {
@@ -302,4 +318,3 @@ export function AiPanel() {
     </div>
   );
 }
-

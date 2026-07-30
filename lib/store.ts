@@ -13,6 +13,7 @@ import { persist } from "zustand/middleware";
 import type {
   DiagramDocument,
   DiagramKind,
+  VibeEdge,
   VibeNodeData,
 } from "./diagram-schema";
 import { blankDocument, starterDocuments } from "./templates";
@@ -27,6 +28,7 @@ type VibeChartState = Snapshot & {
   past: Snapshot[];
   future: Snapshot[];
   selectedNodeId: string | null;
+  selectedEdgeId: string | null;
   hydrated: boolean;
   setHydrated: (value: boolean) => void;
   setActive: (id: string) => void;
@@ -35,13 +37,24 @@ type VibeChartState = Snapshot & {
   deleteDocument: (id: string) => void;
   renameDocument: (title: string) => void;
   replaceActive: (diagram: DiagramDocument) => void;
+  replaceDocumentIfUnchanged: (
+    id: string,
+    baseRevision: number,
+    diagram: DiagramDocument,
+  ) => "applied" | "stale" | "missing";
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (connection: Connection) => void;
+  beginNodeDrag: () => void;
   selectNode: (id: string | null) => void;
+  selectEdge: (id: string | null) => void;
   addNode: (shape?: VibeNodeData["shape"]) => void;
   updateSelectedNode: (patch: Partial<VibeNodeData>) => void;
+  updateSelectedEdge: (
+    patch: Partial<Pick<VibeEdge, "label" | "type" | "animated">>,
+  ) => void;
   removeSelectedNode: () => void;
+  removeSelectedEdge: () => void;
   autoLayout: (direction?: "LR" | "TB") => void;
   undo: () => void;
   redo: () => void;
@@ -62,7 +75,11 @@ const mutateActive = (
   return {
     documents: state.documents.map((document) =>
       document.id === state.activeId
-        ? { ...update(document), updatedAt: new Date().toISOString() }
+        ? {
+            ...update(document),
+            revision: (document.revision ?? 0) + 1,
+            updatedAt: new Date().toISOString(),
+          }
         : document,
     ),
     past: [...state.past, snapshot].slice(-MAX_HISTORY),
@@ -70,17 +87,39 @@ const mutateActive = (
   };
 };
 
+const updateActiveWithoutHistory = (
+  state: VibeChartState,
+  update: (active: DiagramDocument) => DiagramDocument,
+  bumpRevision = false,
+) => ({
+  documents: state.documents.map((document) =>
+    document.id === state.activeId
+      ? {
+          ...update(document),
+          revision: bumpRevision
+            ? (document.revision ?? 0) + 1
+            : document.revision,
+          updatedAt: bumpRevision
+            ? new Date().toISOString()
+            : document.updatedAt,
+        }
+      : document,
+  ),
+});
+
 export const useVibeChartStore = create<VibeChartState>()(
   persist(
     (set) => ({
       documents: starterDocuments,
       activeId: starterDocuments[0].id,
       selectedNodeId: null,
+      selectedEdgeId: null,
       past: [],
       future: [],
       hydrated: false,
       setHydrated: (hydrated) => set({ hydrated }),
-      setActive: (activeId) => set({ activeId, selectedNodeId: null }),
+      setActive: (activeId) =>
+        set({ activeId, selectedNodeId: null, selectedEdgeId: null }),
       addDocument: (kind = "flowchart") =>
         set((state) => {
           const document = blankDocument(kind);
@@ -88,6 +127,7 @@ export const useVibeChartStore = create<VibeChartState>()(
             documents: [document, ...state.documents],
             activeId: document.id,
             selectedNodeId: null,
+            selectedEdgeId: null,
             past: [...state.past, currentSnapshot(state)].slice(-MAX_HISTORY),
             future: [],
           };
@@ -106,6 +146,7 @@ export const useVibeChartStore = create<VibeChartState>()(
             documents: [copy, ...state.documents],
             activeId: copy.id,
             selectedNodeId: null,
+            selectedEdgeId: null,
             past: [...state.past, currentSnapshot(state)].slice(-MAX_HISTORY),
             future: [],
           };
@@ -121,6 +162,7 @@ export const useVibeChartStore = create<VibeChartState>()(
             activeId:
               state.activeId === id ? documents[0].id : state.activeId,
             selectedNodeId: null,
+            selectedEdgeId: null,
             past: [...state.past, currentSnapshot(state)].slice(-MAX_HISTORY),
             future: [],
           };
@@ -136,26 +178,71 @@ export const useVibeChartStore = create<VibeChartState>()(
             id: state.activeId,
           })),
         ),
+      replaceDocumentIfUnchanged: (id, baseRevision, diagram) => {
+        let outcome: "applied" | "stale" | "missing" = "missing";
+        set((state) => {
+          const current = state.documents.find((document) => document.id === id);
+          if (!current) return state;
+          if ((current.revision ?? 0) !== baseRevision) {
+            outcome = "stale";
+            return state;
+          }
+          outcome = "applied";
+          return {
+            documents: state.documents.map((document) =>
+              document.id === id
+                ? {
+                    ...diagram,
+                    id,
+                    revision: (current.revision ?? 0) + 1,
+                    updatedAt: new Date().toISOString(),
+                  }
+                : document,
+            ),
+            past: [...state.past, currentSnapshot(state)].slice(-MAX_HISTORY),
+            future: [],
+          };
+        });
+        return outcome;
+      },
       onNodesChange: (changes) =>
-        set((state) =>
-          mutateActive(state, (document) => ({
+        set((state) => {
+          const changesModel = changes.some(
+            (change) =>
+              change.type !== "select" &&
+              change.type !== "dimensions" &&
+              change.type !== "position",
+          );
+          const changesPosition = changes.some(
+            (change) => change.type === "position",
+          );
+          const update = (document: DiagramDocument) => ({
             ...document,
             nodes: applyNodeChanges(
               changes,
               document.nodes,
             ) as DiagramDocument["nodes"],
-          })),
-        ),
+          });
+          return changesModel
+            ? mutateActive(state, update)
+            : updateActiveWithoutHistory(state, update, changesPosition);
+        }),
       onEdgesChange: (changes) =>
-        set((state) =>
-          mutateActive(state, (document) => ({
+        set((state) => {
+          const changesModel = changes.some(
+            (change) => change.type !== "select",
+          );
+          const update = (document: DiagramDocument) => ({
             ...document,
             edges: applyEdgeChanges(
               changes,
               document.edges,
             ) as DiagramDocument["edges"],
-          })),
-        ),
+          });
+          return changesModel
+            ? mutateActive(state, update)
+            : updateActiveWithoutHistory(state, update);
+        }),
       onConnect: (connection) =>
         set((state) =>
           mutateActive(state, (document) => ({
@@ -170,7 +257,15 @@ export const useVibeChartStore = create<VibeChartState>()(
             ) as DiagramDocument["edges"],
           })),
         ),
-      selectNode: (selectedNodeId) => set({ selectedNodeId }),
+      beginNodeDrag: () =>
+        set((state) => ({
+          past: [...state.past, currentSnapshot(state)].slice(-MAX_HISTORY),
+          future: [],
+        })),
+      selectNode: (selectedNodeId) =>
+        set({ selectedNodeId, selectedEdgeId: null }),
+      selectEdge: (selectedEdgeId) =>
+        set({ selectedEdgeId, selectedNodeId: null }),
       addNode: (shape = "process") =>
         set((state) =>
           mutateActive(state, (document) => {
@@ -215,6 +310,16 @@ export const useVibeChartStore = create<VibeChartState>()(
             ),
           }));
         }),
+      updateSelectedEdge: (patch) =>
+        set((state) => {
+          if (!state.selectedEdgeId) return state;
+          return mutateActive(state, (document) => ({
+            ...document,
+            edges: document.edges.map((edge) =>
+              edge.id === state.selectedEdgeId ? { ...edge, ...patch } : edge,
+            ),
+          }));
+        }),
       removeSelectedNode: () =>
         set((state) => {
           if (!state.selectedNodeId) return state;
@@ -228,6 +333,19 @@ export const useVibeChartStore = create<VibeChartState>()(
               ),
             })),
             selectedNodeId: null,
+            selectedEdgeId: null,
+          };
+        }),
+      removeSelectedEdge: () =>
+        set((state) => {
+          if (!state.selectedEdgeId) return state;
+          const id = state.selectedEdgeId;
+          return {
+            ...mutateActive(state, (document) => ({
+              ...document,
+              edges: document.edges.filter((edge) => edge.id !== id),
+            })),
+            selectedEdgeId: null,
           };
         }),
       autoLayout: (direction) =>
@@ -248,6 +366,7 @@ export const useVibeChartStore = create<VibeChartState>()(
               MAX_HISTORY,
             ),
             selectedNodeId: null,
+            selectedEdgeId: null,
           };
         }),
       redo: () =>
@@ -259,6 +378,7 @@ export const useVibeChartStore = create<VibeChartState>()(
             past: [...state.past, currentSnapshot(state)].slice(-MAX_HISTORY),
             future: state.future.slice(1),
             selectedNodeId: null,
+            selectedEdgeId: null,
           };
         }),
     }),

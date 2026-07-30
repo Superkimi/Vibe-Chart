@@ -24,9 +24,18 @@ describe("canonical diagram schema", () => {
     expect(() => validateDiagram(invalid)).toThrow(/missing node/);
   });
 
+  it("rejects duplicate edge ids and node-edge id collisions", () => {
+    const duplicate = structuredClone(starterDocuments[0]);
+    duplicate.edges[1].id = duplicate.edges[0].id;
+    expect(() => validateDiagram(duplicate)).toThrow(/Duplicate graph id/);
+
+    const collision = structuredClone(starterDocuments[0]);
+    collision.edges[0].id = collision.nodes[0].id;
+    expect(() => validateDiagram(collision)).toThrow(/Duplicate graph id/);
+  });
+
   it("normalizes human labels into stable ids", () => {
     expect(safeId("Order Service v2")).toBe("Order_Service_v2");
     expect(safeId("123")).toBe("n_123");
   });
 });
-

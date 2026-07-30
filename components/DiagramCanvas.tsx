@@ -18,7 +18,9 @@ export function DiagramCanvas() {
   const onNodesChange = useVibeChartStore((state) => state.onNodesChange);
   const onEdgesChange = useVibeChartStore((state) => state.onEdgesChange);
   const onConnect = useVibeChartStore((state) => state.onConnect);
+  const beginNodeDrag = useVibeChartStore((state) => state.beginNodeDrag);
   const selectNode = useVibeChartStore((state) => state.selectNode);
+  const selectEdge = useVibeChartStore((state) => state.selectEdge);
   const nodeTypes = useMemo<NodeTypes>(
     () => ({ vibeNode: DiagramNode }),
     [],
@@ -50,8 +52,13 @@ export function DiagramCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeDragStart={beginNodeDrag}
         onNodeClick={(_, node) => selectNode(node.id)}
-        onPaneClick={() => selectNode(null)}
+        onEdgeClick={(_, edge) => selectEdge(edge.id)}
+        onPaneClick={() => {
+          selectNode(null);
+          selectEdge(null);
+        }}
         fitView
         fitViewOptions={{ padding: 0.18, maxZoom: 1.15 }}
         minZoom={0.18}

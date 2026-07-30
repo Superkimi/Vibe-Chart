@@ -50,10 +50,12 @@ All supported diagrams export to Mermaid:
 - ER diagrams export as `erDiagram`.
 - Sequence diagrams export as `sequenceDiagram`.
 
-The visual round trip currently imports the common flowchart subset. This is a
-deliberate boundary. Mermaid has many grammar-specific constructs that do not
-map losslessly to direct-manipulation nodes. ER and sequence source stay
-exportable and previewable until grammar-specific import adapters are added.
+The visual round trip imports the generated flowchart, ER, and sequence
+subsets. ER entities and sequence participants use stable identifiers plus
+Mermaid display aliases, so a label edit does not discard node identity or
+position. Grammar features without a canonical graph equivalent—such as
+sequence loops, notes, and arbitrary subgraphs—remain previewable but are not
+applied to the canvas.
 
 ## Local persistence
 
@@ -69,4 +71,3 @@ browser local storage. Undo and redo stacks remain in memory and are capped at
 - Model response text is parsed and validated before use.
 - The proxy caps prompts, history, nodes, and edges.
 - The application does not log prompts, documents, or keys.
-

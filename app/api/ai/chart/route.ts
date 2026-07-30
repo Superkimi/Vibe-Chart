@@ -7,7 +7,7 @@ import {
 export const runtime = "edge";
 
 const requestSchema = z.object({
-  baseUrl: z.string().url().max(300),
+  baseUrl: z.union([z.literal(""), z.string().url().max(300)]).default(""),
   apiKey: z.string().max(500).optional().default(""),
   model: z.string().min(1).max(120),
   prompt: z.string().min(2).max(4000),
@@ -49,6 +49,8 @@ function modelEndpoint(baseUrl: string) {
   if (url.username || url.password) {
     throw new Error("Credentials are not allowed in the endpoint URL.");
   }
+  url.search = "";
+  url.hash = "";
   const path = url.pathname.replace(/\/+$/, "");
   url.pathname = path.endsWith("/chat/completions")
     ? path
@@ -97,6 +99,7 @@ function normalizeDiagram(
   return diagramDocumentSchema.parse({
     ...candidate,
     id: current.id,
+    revision: current.revision,
     updatedAt: new Date().toISOString(),
   });
 }
@@ -115,10 +118,10 @@ export async function POST(request: Request) {
         "content-type": "application/json",
         ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
       },
+      signal: AbortSignal.timeout(45_000),
       body: JSON.stringify({
         model: input.model,
         temperature: 0.2,
-        response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           ...input.history.slice(-8),
@@ -158,6 +161,12 @@ export async function POST(request: Request) {
       diagram: normalizeDiagram(parsed.diagram, input.diagram),
     });
   } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      return Response.json(
+        { error: "The model request timed out after 45 seconds." },
+        { status: 504 },
+      );
+    }
     const message =
       error instanceof z.ZodError
         ? error.issues.map((issue) => issue.message).join("; ")
@@ -167,4 +176,3 @@ export async function POST(request: Request) {
     return Response.json({ error: message }, { status: 400 });
   }
 }
-

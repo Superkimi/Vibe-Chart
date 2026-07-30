@@ -22,6 +22,7 @@ function makeDocument(
     title,
     kind,
     direction: "LR",
+    revision: 0,
     updatedAt: new Date().toISOString(),
     nodes: nodes.map(([nodeId, label, subtitle, shape, x, y, fields]) => ({
       id: nodeId,
@@ -120,4 +121,3 @@ export const blankDocument = (kind: DiagramKind = "flowchart"): DiagramDocument 
     [["start", kind === "er" ? "ENTITY" : "Start here", "Double-click to rename", kind === "er" ? "entity" : "process", 120, 100, kind === "er" ? ["uuid id PK"] : []]],
     [],
   );
-
