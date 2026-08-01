@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import { validateDiagram } from "@/lib/diagram-schema";
 import { layoutDiagram } from "@/lib/layout";
+import { withBasePath } from "@/lib/runtime-path";
 import { selectActiveDocument, useVibeChartStore } from "@/lib/store";
 
 type Message = {
@@ -96,7 +97,7 @@ export function AiPanel() {
     setPending(true);
 
     try {
-      const response = await fetch("/api/ai/chart", {
+      const response = await fetch(withBasePath("/api/ai/chart"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
