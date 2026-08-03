@@ -418,7 +418,8 @@ details > summary::-webkit-details-marker {
 }
 
 .history-controls button,
-.theme-toggle {
+.theme-toggle,
+.language-toggle {
   display: grid;
   width: 31px;
   height: 31px;
@@ -431,7 +432,8 @@ details > summary::-webkit-details-marker {
 }
 
 .history-controls button:hover,
-.theme-toggle:hover {
+.theme-toggle:hover,
+.language-toggle:hover {
   background: var(--accent-soft);
   color: var(--text);
 }
@@ -491,6 +493,14 @@ details > summary::-webkit-details-marker {
 .toolbar-actions > button:hover,
 .toolbar-menu > summary:hover {
   border-color: var(--line-strong);
+}
+
+.language-toggle {
+  width: auto;
+  min-width: 54px;
+  padding: 0 8px;
+  gap: 5px;
+  font: 620 10px "Geist Mono Variable", monospace;
 }
 
 .toolbar-menu {
@@ -1371,7 +1381,7 @@ details > summary::-webkit-details-marker {
     display: none;
   }
 
-  .toolbar-actions > button:not(.theme-toggle) {
+  .toolbar-actions > button:not(.theme-toggle):not(.language-toggle) {
     display: none;
   }
 }
@@ -1497,6 +1507,16 @@ details > summary::-webkit-details-marker {
   }
 
   .toolbar-menu > summary svg:last-child {
+    display: none;
+  }
+
+  .language-toggle {
+    min-width: 31px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .language-toggle span {
     display: none;
   }
 

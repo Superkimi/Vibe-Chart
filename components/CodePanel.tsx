@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowClockwise, Check, Copy } from "@phosphor-icons/react";
 import { fromMermaid, toMermaid } from "@/lib/diagram-code";
+import { useI18n } from "@/lib/i18n";
 import { selectActiveDocument, useVibeChartStore } from "@/lib/store";
 
 export function CodePanel() {
+  const { t } = useI18n();
   const diagram = useVibeChartStore(selectActiveDocument);
   const replaceActive = useVibeChartStore((state) => state.replaceActive);
   const generated = useMemo(() => toMermaid(diagram), [diagram]);
@@ -46,7 +48,7 @@ export function CodePanel() {
           setError(
             renderError instanceof Error
               ? renderError.message
-              : "Mermaid could not render this source.",
+              : t("mermaidRenderFallback"),
           );
         }
       }
@@ -56,7 +58,7 @@ export function CodePanel() {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [source, diagram.id]);
+  }, [source, diagram.id, t]);
 
   const applyCode = () => {
     try {
@@ -67,7 +69,7 @@ export function CodePanel() {
       setError(
         applyError instanceof Error
           ? applyError.message
-          : "Could not apply Mermaid source.",
+          : t("mermaidApplyFallback"),
       );
     }
   };
@@ -83,8 +85,8 @@ export function CodePanel() {
       <div className="code-editor-pane">
         <header>
           <div>
-            <strong>Mermaid source</strong>
-            <span>Code stays synchronized with the visual model.</span>
+            <strong>{t("mermaidSource")}</strong>
+            <span>{t("codeSyncHint")}</span>
           </div>
           <div className="code-actions">
             <button
@@ -94,16 +96,16 @@ export function CodePanel() {
               }}
             >
               <ArrowClockwise size={14} />
-              Reset
+              {t("reset")}
             </button>
             <button type="button" onClick={copy}>
               {copied ? <Check size={14} /> : <Copy size={14} />}
-              {copied ? "Copied" : "Copy"}
+              {copied ? t("copied") : t("copy")}
             </button>
           </div>
         </header>
         <textarea
-          aria-label="Mermaid code"
+          aria-label={t("mermaidCode")}
           spellCheck={false}
           value={source}
           onChange={(event) => {
@@ -112,17 +114,17 @@ export function CodePanel() {
         />
         <footer>
           <span className={error ? "code-status error" : "code-status"}>
-            {error || "Syntax preview is valid."}
+            {error || t("syntaxValid")}
           </span>
           <button type="button" className="primary-action" onClick={applyCode}>
-            Apply to canvas
+            {t("applyCanvas")}
           </button>
         </footer>
       </div>
       <div className="mermaid-preview-pane">
         <header>
-          <strong>Rendered preview</strong>
-          <span>Strict security mode</span>
+          <strong>{t("renderedPreview")}</strong>
+          <span>{t("strictSecurity")}</span>
         </header>
         <div ref={previewRef} className="mermaid-preview" />
       </div>

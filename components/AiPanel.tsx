@@ -10,6 +10,7 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { validateDiagram } from "@/lib/diagram-schema";
+import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { layoutDiagram } from "@/lib/layout";
 import { withBasePath } from "@/lib/runtime-path";
 import { selectActiveDocument, useVibeChartStore } from "@/lib/store";
@@ -33,13 +34,14 @@ const defaultSettings: ModelSettings = {
   apiKey: "",
 };
 
-const quickPrompts = [
-  "Turn this into a clean three-tier architecture",
-  "Add failure handling and a retry path",
-  "Reduce crossings and improve the layout",
+const quickPromptKeys: TranslationKey[] = [
+  "quickArchitecture",
+  "quickFailure",
+  "quickLayout",
 ];
 
 export function AiPanel() {
+  const { locale, t } = useI18n();
   const diagram = useVibeChartStore(selectActiveDocument);
   const replaceDocumentIfUnchanged = useVibeChartStore(
     (state) => state.replaceDocumentIfUnchanged,
@@ -48,8 +50,7 @@ export function AiPanel() {
     {
       id: "welcome",
       role: "assistant",
-      content:
-        "Describe the outcome you want. I will edit the graph structure and keep the result reversible.",
+      content: t("describeOutcome"),
     },
   ]);
   const [prompt, setPrompt] = useState("");
@@ -68,6 +69,14 @@ export function AiPanel() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    setMessages((current) =>
+      current.length === 1 && current[0].id === "welcome"
+        ? [{ ...current[0], content: t("describeOutcome") }]
+        : current,
+    );
+  }, [t]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -102,6 +111,7 @@ export function AiPanel() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           ...settings,
+          locale,
           prompt: text,
           diagram: requestDiagram,
           history: nextMessages
@@ -118,7 +128,7 @@ export function AiPanel() {
         detail?: string;
       };
       if (!response.ok || !result.diagram) {
-        throw new Error(result.error || result.detail || "AI edit failed.");
+        throw new Error(result.error || result.detail || t("aiEditFailed"));
       }
       const prepared = layoutDiagram(validateDiagram(result.diagram));
       const outcome = replaceDocumentIfUnchanged(
@@ -127,19 +137,17 @@ export function AiPanel() {
         prepared,
       );
       if (outcome === "stale") {
-        throw new Error(
-          "The diagram changed while AI was working. Review your latest edits and send the request again.",
-        );
+        throw new Error(t("staleDiagram"));
       }
       if (outcome === "missing") {
-        throw new Error("This diagram no longer exists.");
+        throw new Error(t("missingDiagram"));
       }
       setMessages((current) => [
         ...current,
         {
           id: `assistant-${Date.now()}`,
           role: "assistant",
-          content: result.summary || "The diagram has been updated.",
+          content: result.summary || t("diagramUpdated"),
           state: "applied",
         },
       ]);
@@ -150,7 +158,7 @@ export function AiPanel() {
           id: `assistant-error-${Date.now()}`,
           role: "assistant",
           content:
-            error instanceof Error ? error.message : "Could not apply AI edit.",
+            error instanceof Error ? error.message : t("aiApplyFailed"),
           state: "error",
         },
       ]);
@@ -167,14 +175,14 @@ export function AiPanel() {
             <Sparkle size={16} weight="fill" />
           </span>
           <div>
-            <strong>Vibe with your chart</strong>
+            <strong>{t("vibeWithChart")}</strong>
             <small>{settings.model}</small>
           </div>
         </div>
         <button
           type="button"
           className="icon-button"
-          aria-label="Configure model"
+          aria-label={t("configureModel")}
           onClick={() => setSettingsOpen((open) => !open)}
         >
           <GearSix size={17} />
@@ -182,9 +190,9 @@ export function AiPanel() {
       </header>
 
       {settingsOpen ? (
-        <section className="model-settings" aria-label="Model settings">
+        <section className="model-settings" aria-label={t("modelSettings")}>
           <label>
-            Provider endpoint
+            {t("providerEndpoint")}
             <input
               value={settings.baseUrl}
               onChange={(event) =>
@@ -197,7 +205,7 @@ export function AiPanel() {
             />
           </label>
           <label>
-            Model
+            {t("model")}
             <input
               value={settings.model}
               onChange={(event) =>
@@ -210,7 +218,7 @@ export function AiPanel() {
             />
           </label>
           <label>
-            API key
+            {t("apiKey")}
             <input
               type="password"
               value={settings.apiKey}
@@ -220,15 +228,16 @@ export function AiPanel() {
                   apiKey: event.target.value,
                 }))
               }
-              placeholder="Stored for this tab only"
+              placeholder={t("storedForTab")}
             />
           </label>
-          <p>
-            Your key stays in session storage and is sent only when you request
-            an edit.
-          </p>
-          <button type="button" className="primary-action" onClick={saveSettings}>
-            Save model
+          <p>{t("keyStorageHint")}</p>
+          <button
+            type="button"
+            className="primary-action"
+            onClick={saveSettings}
+          >
+            {t("saveModel")}
           </button>
         </section>
       ) : null}
@@ -249,13 +258,13 @@ export function AiPanel() {
               {message.state === "applied" ? (
                 <small>
                   <CheckCircle size={13} weight="fill" />
-                  Applied to canvas
+                  {t("appliedToCanvas")}
                 </small>
               ) : null}
               {message.state === "error" ? (
                 <small>
                   <WarningCircle size={13} weight="fill" />
-                  Check model settings
+                  {t("checkModelSettings")}
                 </small>
               ) : null}
             </div>
@@ -267,7 +276,7 @@ export function AiPanel() {
               <Sparkle size={12} weight="fill" />
             </span>
             <div>
-              <p>Reading structure and planning a safe edit…</p>
+              <p>{t("pendingEdit")}</p>
               <span className="thinking-line" />
             </div>
           </article>
@@ -277,13 +286,13 @@ export function AiPanel() {
 
       {messages.length === 1 ? (
         <div className="quick-prompts">
-          {quickPrompts.map((item) => (
+          {quickPromptKeys.map((key) => (
             <button
               type="button"
-              key={item}
-              onClick={() => setPrompt(item)}
+              key={key}
+              onClick={() => setPrompt(t(key))}
             >
-              <span>{item}</span>
+              <span>{t(key)}</span>
               <ArrowRight size={13} />
             </button>
           ))}
@@ -300,17 +309,17 @@ export function AiPanel() {
               void submit();
             }
           }}
-          placeholder="Add a cache, split the payment flow, simplify the ER model…"
-          aria-label="Describe a diagram change"
+          placeholder={t("promptPlaceholder")}
+          aria-label={t("describeChange")}
           rows={3}
         />
         <div>
-          <span>Enter to send · Shift+Enter for new line</span>
+          <span>{t("enterHint")}</span>
           <button
             type="submit"
             className="send-button"
             disabled={!prompt.trim() || pending}
-            aria-label="Send diagram request"
+            aria-label={t("sendRequest")}
           >
             <PaperPlaneTilt size={16} weight="fill" />
           </button>

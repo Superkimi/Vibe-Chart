@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { VibeNodeData } from "@/lib/diagram-schema";
+import { useI18n } from "@/lib/i18n";
 
 const iconForShape = {
   service: HardDrives,
@@ -22,12 +23,13 @@ const iconForShape = {
 };
 
 export function DiagramNode({ data, selected }: NodeProps) {
+  const { t } = useI18n();
   const nodeData = data as VibeNodeData;
   const Icon = iconForShape[nodeData.shape] ?? Robot;
   return (
     <article
       className={`diagram-node diagram-node--${nodeData.shape} tone-${nodeData.tone} ${selected ? "is-selected" : ""}`}
-      aria-label={`${nodeData.label} diagram node`}
+      aria-label={t("diagramNode", { label: nodeData.label })}
     >
       <Handle type="target" position={Position.Left} />
       <Handle type="target" position={Position.Top} id="top-target" />
@@ -52,4 +54,3 @@ export function DiagramNode({ data, selected }: NodeProps) {
     </article>
   );
 }
-

@@ -13,6 +13,7 @@ import {
   UserCircle,
 } from "@phosphor-icons/react";
 import { nodeShapes, type NodeShape } from "@/lib/diagram-schema";
+import { useI18n } from "@/lib/i18n";
 import { selectActiveDocument, useVibeChartStore } from "@/lib/store";
 import { AiPanel } from "./AiPanel";
 
@@ -27,6 +28,7 @@ const shapeIcons = {
 };
 
 export function InspectorPanel() {
+  const { t } = useI18n();
   const [tab, setTab] = useState<"design" | "ai">("ai");
   const diagram = useVibeChartStore(selectActiveDocument);
   const selectedNodeId = useVibeChartStore((state) => state.selectedNodeId);
@@ -47,7 +49,7 @@ export function InspectorPanel() {
   const selectedEdge = diagram.edges.find((edge) => edge.id === selectedEdgeId);
 
   return (
-    <aside className="inspector-panel" aria-label="Diagram inspector">
+    <aside className="inspector-panel" aria-label={t("diagramInspector")}>
       <div className="inspector-tabs" role="tablist">
         <button
           type="button"
@@ -55,7 +57,7 @@ export function InspectorPanel() {
           onClick={() => setTab("design")}
           role="tab"
         >
-          Properties
+          {t("properties")}
         </button>
         <button
           type="button"
@@ -64,7 +66,7 @@ export function InspectorPanel() {
           role="tab"
         >
           <Sparkle size={13} weight="fill" />
-          AI
+          {t("ai")}
         </button>
       </div>
       {tab === "ai" ? (
@@ -75,20 +77,20 @@ export function InspectorPanel() {
             <>
               <header className="properties-title">
                 <div>
-                  <strong>Selected node</strong>
+                  <strong>{t("selectedNode")}</strong>
                   <small>{selected.id}</small>
                 </div>
                 <button
                   type="button"
                   className="icon-button danger"
                   onClick={removeSelectedNode}
-                  aria-label="Delete selected node"
+                  aria-label={t("deleteSelectedNode")}
                 >
                   <Trash size={16} />
                 </button>
               </header>
               <label>
-                Label
+                {t("label")}
                 <input
                   value={selected.data.label}
                   onChange={(event) =>
@@ -97,7 +99,7 @@ export function InspectorPanel() {
                 />
               </label>
               <label>
-                Description
+                {t("description")}
                 <textarea
                   rows={3}
                   value={selected.data.subtitle}
@@ -107,7 +109,7 @@ export function InspectorPanel() {
                 />
               </label>
               <fieldset>
-                <legend>Shape</legend>
+                <legend>{t("shape")}</legend>
                 <div className="shape-grid">
                   {nodeShapes.map((shape) => {
                     const Icon = shapeIcons[shape];
@@ -123,21 +125,21 @@ export function InspectorPanel() {
                         }
                       >
                         <Icon size={16} />
-                        {shape}
+                        {t(shape)}
                       </button>
                     );
                   })}
                 </div>
               </fieldset>
               <fieldset>
-                <legend>Accent</legend>
+                <legend>{t("accent")}</legend>
                 <div className="tone-grid">
                   {(["lilac", "slate", "cyan", "amber", "rose"] as const).map(
                     (tone) => (
                       <button
                         type="button"
-                        aria-label={`${tone} accent`}
-                        title={tone}
+                        aria-label={t("toneAccent", { tone: t(tone) })}
+                        title={t(tone)}
                         key={tone}
                         className={`tone-swatch tone-${tone} ${selected.data.tone === tone ? "is-active" : ""}`}
                         onClick={() => updateSelectedNode({ tone })}
@@ -148,7 +150,7 @@ export function InspectorPanel() {
               </fieldset>
               {selected.data.shape === "entity" ? (
                 <label>
-                  Fields
+                  {t("fields")}
                   <textarea
                     rows={7}
                     className="mono-input"
@@ -162,7 +164,7 @@ export function InspectorPanel() {
                       })
                     }
                   />
-                  <small>One field per line: type name constraint</small>
+                  <small>{t("fieldHint")}</small>
                 </label>
               ) : null}
             </>
@@ -170,30 +172,30 @@ export function InspectorPanel() {
             <>
               <header className="properties-title">
                 <div>
-                  <strong>Selected connection</strong>
+                  <strong>{t("selectedConnection")}</strong>
                   <small>{selectedEdge.source} → {selectedEdge.target}</small>
                 </div>
                 <button
                   type="button"
                   className="icon-button danger"
                   onClick={removeSelectedEdge}
-                  aria-label="Delete selected connection"
+                  aria-label={t("deleteSelectedConnection")}
                 >
                   <Trash size={16} />
                 </button>
               </header>
               <label>
-                Label
+                {t("label")}
                 <input
                   value={selectedEdge.label}
                   onChange={(event) =>
                     updateSelectedEdge({ label: event.target.value })
                   }
-                  placeholder="request, publishes, retries…"
+                  placeholder={t("edgeLabelPlaceholder")}
                 />
               </label>
               <fieldset>
-                <legend>Line style</legend>
+                <legend>{t("lineStyle")}</legend>
                 <div className="shape-grid">
                   {(["smoothstep", "straight", "bezier"] as const).map(
                     (type) => (
@@ -204,7 +206,7 @@ export function InspectorPanel() {
                         onClick={() => updateSelectedEdge({ type })}
                       >
                         <FlowArrow size={16} />
-                        {type}
+                        {t(type)}
                       </button>
                     ),
                   )}
@@ -218,14 +220,14 @@ export function InspectorPanel() {
                     updateSelectedEdge({ animated: event.target.checked })
                   }
                 />
-                Animate direction
+                {t("animateDirection")}
               </label>
             </>
           ) : (
             <div className="empty-properties">
               <Robot size={28} weight="duotone" />
-              <strong>Select a node</strong>
-              <p>Click a node on the canvas to edit its content and style.</p>
+              <strong>{t("selectNode")}</strong>
+              <p>{t("selectNodeHint")}</p>
             </div>
           )}
         </div>

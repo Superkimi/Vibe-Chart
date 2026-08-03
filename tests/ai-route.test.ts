@@ -35,6 +35,7 @@ describe("AI diagram route", () => {
           baseUrl: "https://models.example.com/v1?ignored=true",
           apiKey: "session-key",
           model: "diagram-model",
+          locale: "zh",
           prompt: "Improve the diagram",
           diagram: current,
           history: [],
@@ -54,6 +55,7 @@ describe("AI diagram route", () => {
     expect(options.headers.authorization).toBe("Bearer session-key");
     const body = JSON.parse(options.body);
     expect(body.response_format).toBeUndefined();
+    expect(body.messages[0].content).toContain("Simplified Chinese");
     expect(body.messages.at(-1).content).toContain("Current diagram JSON");
   });
 

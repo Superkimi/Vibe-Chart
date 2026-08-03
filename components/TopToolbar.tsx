@@ -16,6 +16,7 @@ import {
   Moon,
   Robot,
   Sun,
+  Translate,
 } from "@phosphor-icons/react";
 import { toPng, toSvg } from "html-to-image";
 import {
@@ -24,6 +25,7 @@ import {
   toMermaid,
 } from "@/lib/diagram-code";
 import { selectActiveDocument, useVibeChartStore } from "@/lib/store";
+import { useI18n } from "@/lib/i18n";
 import type { NodeShape } from "@/lib/diagram-schema";
 
 type ViewMode = "canvas" | "code";
@@ -38,6 +40,7 @@ export function TopToolbar({
   view: ViewMode;
   onViewChange: (view: ViewMode) => void;
 }) {
+  const { locale, setLocale, t } = useI18n();
   const diagram = useVibeChartStore(selectActiveDocument);
   const renameDocument = useVibeChartStore((state) => state.renameDocument);
   const addNode = useVibeChartStore((state) => state.addNode);
@@ -66,6 +69,10 @@ export function TopToolbar({
     setTheme(next);
     document.documentElement.dataset.theme = next;
     localStorage.setItem("vibe-chart-theme", next);
+  };
+
+  const toggleLocale = () => {
+    setLocale(locale === "en" ? "zh" : "en");
   };
 
   const textExport = (format: "mermaid" | "drawio" | "json") => {
@@ -126,28 +133,28 @@ export function TopToolbar({
         <input
           value={diagram.title}
           onChange={(event) => renameDocument(event.target.value)}
-          aria-label="Diagram title"
+          aria-label={t("diagramTitle")}
         />
-        <span>Saved</span>
+        <span>{t("saved")}</span>
       </div>
 
       <div className="toolbar-group history-controls">
-        <button type="button" onClick={undo} disabled={!canUndo} title="Undo">
+        <button type="button" onClick={undo} disabled={!canUndo} title={t("undo")}>
           <ArrowCounterClockwise size={16} />
         </button>
-        <button type="button" onClick={redo} disabled={!canRedo} title="Redo">
+        <button type="button" onClick={redo} disabled={!canRedo} title={t("redo")}>
           <ArrowClockwise size={16} />
         </button>
       </div>
 
-      <div className="view-switch" role="tablist" aria-label="Editor view">
+      <div className="view-switch" role="tablist" aria-label={t("editorView")}>
         <button
           type="button"
           className={view === "canvas" ? "is-active" : ""}
           onClick={() => onViewChange("canvas")}
         >
           <CirclesThreePlus size={15} />
-          Canvas
+          {t("canvas")}
         </button>
         <button
           type="button"
@@ -155,7 +162,7 @@ export function TopToolbar({
           onClick={() => onViewChange("code")}
         >
           <Code size={15} />
-          Code
+          {t("code")}
         </button>
       </div>
 
@@ -163,80 +170,92 @@ export function TopToolbar({
         <details className="toolbar-menu add-node-menu">
           <summary>
             <CirclesThreePlus size={16} />
-            Add
+            {t("add")}
             <CaretDown size={12} />
           </summary>
           <div className="toolbar-popover">
             <button type="button" onClick={() => addShape("process")}>
               <Robot size={16} />
-              Process
+              {t("process")}
             </button>
             <button type="button" onClick={() => addShape("decision")}>
               <Diamond size={16} />
-              Decision
+              {t("decision")}
             </button>
             <button type="button" onClick={() => addShape("database")}>
               <Database size={16} />
-              Database
+              {t("database")}
             </button>
             <button type="button" onClick={() => addShape("service")}>
               <FlowArrow size={16} />
-              Service
+              {t("service")}
             </button>
           </div>
         </details>
         <button type="button" onClick={() => autoLayout()}>
           <BracketsCurly size={16} />
-          Arrange
+          {t("arrange")}
         </button>
         <button
           type="button"
           className="theme-toggle"
           onClick={toggleTheme}
-          aria-label={`Use ${theme === "light" ? "dark" : "light"} theme`}
+          aria-label={
+            theme === "light" ? t("useDarkTheme") : t("useLightTheme")
+          }
         >
           {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+        </button>
+        <button
+          type="button"
+          className="language-toggle"
+          onClick={toggleLocale}
+          aria-label={t("switchLanguage")}
+          title={t("switchLanguage")}
+        >
+          <Translate size={16} />
+          <span>{locale === "en" ? t("chinese") : t("english")}</span>
         </button>
         <details className="toolbar-menu export-menu" ref={exportDetails}>
           <summary className="primary-action">
             <DownloadSimple size={16} />
-            {exporting ? "Exporting" : "Export"}
+            {exporting ? t("exporting") : t("export")}
             <CaretDown size={12} />
           </summary>
           <div className="toolbar-popover export-popover">
             <button type="button" onClick={() => void imageExport("png")}>
               <ImageIcon size={16} />
               <span>
-                <strong>PNG image</strong>
-                <small>2x resolution</small>
+                <strong>{t("pngImage")}</strong>
+                <small>{t("twoXResolution")}</small>
               </span>
             </button>
             <button type="button" onClick={() => void imageExport("svg")}>
               <ImageIcon size={16} />
               <span>
-                <strong>SVG image</strong>
-                <small>Scalable vector</small>
+                <strong>{t("svgImage")}</strong>
+                <small>{t("scalableVector")}</small>
               </span>
             </button>
             <button type="button" onClick={() => textExport("drawio")}>
               <FlowArrow size={16} />
               <span>
-                <strong>draw.io</strong>
-                <small>Editable XML</small>
+                <strong>{t("drawio")}</strong>
+                <small>{t("editableXml")}</small>
               </span>
             </button>
             <button type="button" onClick={() => textExport("mermaid")}>
               <Code size={16} />
               <span>
-                <strong>Mermaid</strong>
-                <small>Diagram as code</small>
+                <strong>{t("mermaid")}</strong>
+                <small>{t("diagramAsCode")}</small>
               </span>
             </button>
             <button type="button" onClick={() => textExport("json")}>
               <BracketsCurly size={16} />
               <span>
-                <strong>Vibe JSON</strong>
-                <small>Canonical schema</small>
+                <strong>{t("vibeJson")}</strong>
+                <small>{t("canonicalSchema")}</small>
               </span>
             </button>
           </div>

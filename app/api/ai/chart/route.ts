@@ -10,6 +10,7 @@ const requestSchema = z.object({
   baseUrl: z.union([z.literal(""), z.string().url().max(300)]).default(""),
   apiKey: z.string().max(500).optional().default(""),
   model: z.string().min(1).max(120),
+  locale: z.enum(["en", "zh"]).default("en"),
   prompt: z.string().min(2).max(4000),
   diagram: diagramDocumentSchema,
   history: z
@@ -123,7 +124,10 @@ export async function POST(request: Request) {
         model: input.model,
         temperature: 0.2,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "system",
+            content: `${SYSTEM_PROMPT}\n- Write the summary in ${input.locale === "zh" ? "Simplified Chinese" : "English"}.`,
+          },
           ...input.history.slice(-8),
           {
             role: "user",

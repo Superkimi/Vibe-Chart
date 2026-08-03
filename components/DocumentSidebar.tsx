@@ -11,6 +11,7 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import type { DiagramKind } from "@/lib/diagram-schema";
+import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { useVibeChartStore } from "@/lib/store";
 
 const kindIcon = {
@@ -20,14 +21,15 @@ const kindIcon = {
   sequence: ArrowsClockwise,
 };
 
-const createOptions: Array<{ kind: DiagramKind; label: string }> = [
-  { kind: "architecture", label: "Architecture" },
-  { kind: "flowchart", label: "Flowchart" },
-  { kind: "er", label: "ER diagram" },
-  { kind: "sequence", label: "Sequence" },
+const createOptions: Array<{ kind: DiagramKind; labelKey: TranslationKey }> = [
+  { kind: "architecture", labelKey: "architecture" },
+  { kind: "flowchart", labelKey: "flowchart" },
+  { kind: "er", labelKey: "erDiagram" },
+  { kind: "sequence", labelKey: "sequence" },
 ];
 
 export function DocumentSidebar() {
+  const { t } = useI18n();
   const documents = useVibeChartStore((state) => state.documents);
   const activeId = useVibeChartStore((state) => state.activeId);
   const setActive = useVibeChartStore((state) => state.setActive);
@@ -38,29 +40,29 @@ export function DocumentSidebar() {
   const deleteDocument = useVibeChartStore((state) => state.deleteDocument);
 
   return (
-    <aside className="document-sidebar" aria-label="Diagram directory">
+    <aside className="document-sidebar" aria-label={t("diagramDirectory")}>
       <div className="brand-lockup">
         <div className="brand-mark" aria-hidden="true">
           <GitBranch size={20} weight="bold" />
         </div>
         <div>
           <strong>Vibe Chart</strong>
-          <span>Diagram studio</span>
+          <span>{t("diagramStudio")}</span>
         </div>
       </div>
 
       <details className="new-diagram-menu">
         <summary>
           <Plus size={15} weight="bold" />
-          New diagram
+          {t("newDiagram")}
         </summary>
         <div className="new-diagram-popover">
-          {createOptions.map(({ kind, label }) => {
+          {createOptions.map(({ kind, labelKey }) => {
             const Icon = kindIcon[kind];
             return (
               <button type="button" key={kind} onClick={() => addDocument(kind)}>
                 <Icon size={16} />
-                {label}
+                {t(labelKey)}
               </button>
             );
           })}
@@ -68,7 +70,7 @@ export function DocumentSidebar() {
       </details>
 
       <div className="sidebar-section-label">
-        <span>Workspace</span>
+        <span>{t("workspace")}</span>
         <small>{documents.length}</small>
       </div>
 
@@ -86,7 +88,7 @@ export function DocumentSidebar() {
               <span>
                 <strong>{document.title}</strong>
                 <small>
-                  {document.kind} · {document.nodes.length} nodes
+                  {t(document.kind === "er" ? "erDiagram" : document.kind)} · {t("nodes", { count: document.nodes.length })}
                 </small>
               </span>
               <DotsThree size={17} aria-hidden="true" />
@@ -99,22 +101,21 @@ export function DocumentSidebar() {
         <button
           type="button"
           onClick={() => duplicateDocument(activeId)}
-          title="Duplicate current diagram"
+          title={t("duplicateCurrentDiagram")}
         >
           <Copy size={15} />
-          Duplicate
+          {t("duplicate")}
         </button>
         <button
           type="button"
           onClick={() => deleteDocument(activeId)}
-          title="Delete current diagram"
+          title={t("deleteCurrentDiagram")}
         >
           <Trash size={15} />
-          Delete
+          {t("delete")}
         </button>
       </div>
-      <p className="local-note">Saved locally in this browser.</p>
+      <p className="local-note">{t("savedLocally")}</p>
     </aside>
   );
 }
-
