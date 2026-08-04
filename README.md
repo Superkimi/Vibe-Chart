@@ -12,12 +12,14 @@ source of truth.
 - Direct node and edge editing on a zoomable canvas
 - Architecture, flowchart, ER, and sequence starting points
 - AI edits through any OpenAI-compatible chat completion endpoint
+- Targeted AI edits can use validated ID-level operations, preserving unrelated graph content
 - Configurable endpoint, model, and API key stored for the browser tab only
 - Canonical typed graph validated before an AI edit reaches the canvas
 - Mermaid source and strict-mode rendered preview
 - Flowchart, ER, and sequence Mermaid source applied back to the visual canvas
 - draw.io XML, Mermaid, PNG, SVG, and Vibe JSON export
 - Automatic Dagre layout in left-to-right or top-to-bottom direction
+- Quality hints for overlaps and blocked edge routes after AI/layout changes
 - Undo, redo, duplication, local auto-save, light mode, and dark mode
 - Responsive workspace with a compact document rail
 

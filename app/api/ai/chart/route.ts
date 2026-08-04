@@ -3,6 +3,11 @@ import {
   diagramDocumentSchema,
   type DiagramDocument,
 } from "@/lib/diagram-schema";
+import {
+  applyDiagramOperations,
+  diagramOperationSchema,
+} from "@/lib/diagram-operations";
+import { buildDiagramSystemPrompt } from "@/lib/ai-skills";
 
 export const runtime = "edge";
 
@@ -59,26 +64,15 @@ function modelEndpoint(baseUrl: string) {
   return url.toString();
 }
 
-const SYSTEM_PROMPT = `You are Vibe Chart's diagram planner. Modify the supplied diagram as a typed graph, not as prose.
-
-Return exactly one JSON object with:
-{
-  "summary": "short user-facing description",
-  "diagram": <complete updated diagram>
-}
-
-Diagram quality rules:
-- Preserve stable node ids when a concept remains. Use ids matching ^[A-Za-z][A-Za-z0-9_-]*$.
-- Keep architecture diagrams to 5-14 meaningful nodes unless the user asks for detail.
-- One node represents one responsibility. Put explanation in subtitle, not extra nodes.
-- Every edge must reference existing nodes. Prefer a readable primary path and avoid unnecessary crossing.
-- Use LR for architecture and sequence, TB for decision-heavy flows unless requested otherwise.
-- Valid shapes: service, process, decision, database, external, actor, entity.
-- Valid tones: lilac, slate, cyan, amber, rose.
-- For ER entities, fields are strings in "type name constraint" form, for example "uuid id PK".
-- Positions are editable canvas coordinates. Spread nodes by at least 230px horizontally and 130px vertically.
-- Treat the user's request as an edit to the current graph. Never discard unrelated correct content.
-- Do not include markdown fences, comments, or any keys outside summary and diagram.`;
+const responseSchema = z
+  .object({
+    summary: z.string().min(1).max(500),
+    diagram: diagramDocumentSchema.optional(),
+    operations: z.array(diagramOperationSchema).min(1).max(80).optional(),
+  })
+  .refine((value) => value.diagram || value.operations, {
+    message: "The model must return a diagram or at least one operation.",
+  });
 
 function extractJson(content: string) {
   const fenced = content
@@ -126,7 +120,11 @@ export async function POST(request: Request) {
         messages: [
           {
             role: "system",
-            content: `${SYSTEM_PROMPT}\n- Write the summary in ${input.locale === "zh" ? "Simplified Chinese" : "English"}.`,
+            content: buildDiagramSystemPrompt({
+              kind: input.diagram.kind,
+              prompt: input.prompt,
+              locale: input.locale,
+            }),
           },
           ...input.history.slice(-8),
           {
@@ -153,16 +151,16 @@ export async function POST(request: Request) {
     };
     const content = payload.choices?.[0]?.message?.content;
     if (!content) throw new Error("The model returned an empty response.");
-    const parsed = z
-      .object({
-        summary: z.string().min(1).max(500),
-        diagram: diagramDocumentSchema,
-      })
-      .parse(extractJson(content));
+    const parsed = responseSchema.parse(extractJson(content));
+    const candidate = parsed.diagram
+      ? parsed.diagram
+      : applyDiagramOperations(input.diagram, parsed.operations ?? []);
+    const normalized = normalizeDiagram(candidate, input.diagram);
 
     return Response.json({
       summary: parsed.summary,
-      diagram: normalizeDiagram(parsed.diagram, input.diagram),
+      diagram: normalized,
+      editMode: parsed.diagram ? "document" : "operations",
     });
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {

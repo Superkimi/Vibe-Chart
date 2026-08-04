@@ -10,6 +10,7 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { validateDiagram } from "@/lib/diagram-schema";
+import { assessDiagramQuality } from "@/lib/diagram-quality";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { layoutDiagram } from "@/lib/layout";
 import { withBasePath } from "@/lib/runtime-path";
@@ -131,6 +132,7 @@ export function AiPanel() {
         throw new Error(result.error || result.detail || t("aiEditFailed"));
       }
       const prepared = layoutDiagram(validateDiagram(result.diagram));
+      const qualityIssues = assessDiagramQuality(prepared);
       const outcome = replaceDocumentIfUnchanged(
         requestDiagram.id,
         requestDiagram.revision ?? 0,
@@ -147,7 +149,11 @@ export function AiPanel() {
         {
           id: `assistant-${Date.now()}`,
           role: "assistant",
-          content: result.summary || t("diagramUpdated"),
+          content: `${result.summary || t("diagramUpdated")}${
+            qualityIssues.length
+              ? ` ${t("qualityWarnings", { count: qualityIssues.length })}`
+              : ""
+          }`,
           state: "applied",
         },
       ]);

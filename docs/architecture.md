@@ -27,17 +27,25 @@ The design has three practical benefits:
 The AI route accepts a prompt, a bounded message history, model connection
 settings, and the current validated document.
 
-The system instruction requests one JSON object with a short summary and a
-complete updated document. The server then:
+The system instruction is split into small diagram-kind skills. It requests one
+JSON object with a short summary and either a complete updated document or a
+bounded list of ID-addressed operations. The server then:
 
 1. Parses the request with Zod.
 2. Rejects unsafe model endpoints.
 3. Calls an OpenAI-compatible `/chat/completions` endpoint.
 4. Extracts the JSON response.
-5. Validates IDs, node data, edge references, and document limits.
-6. Preserves the current document ID.
-7. Returns the validated edit to the browser.
-8. Records the previous workspace snapshot before applying it.
+5. Applies targeted operations against the current graph when the model chose
+   an incremental edit.
+6. Validates IDs, node data, edge references, and document limits.
+7. Preserves the current document ID.
+8. Returns the validated edit to the browser.
+9. Records the previous workspace snapshot before applying it.
+
+After Dagre lays out the result, a deterministic quality pass flags node
+overlaps, duplicate routes, and edges crossing unrelated nodes. These are
+review hints rather than another model call, so they remain fast and
+predictable.
 
 The API key is never written to the application database or returned from the
 server. Browser-provided keys live in `sessionStorage`.

@@ -98,4 +98,53 @@ describe("AI diagram route", () => {
       error: expect.stringContaining("missing node"),
     });
   });
+
+  it("applies an ID-addressed operation without requiring a full graph rewrite", async () => {
+    const current = structuredClone(starterDocuments[0]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  summary: "Renamed the client.",
+                  operations: [
+                    {
+                      op: "update_node",
+                      id: current.nodes[0].id,
+                      patch: { label: "Renamed client" },
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+      ),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/ai/chart", {
+        method: "POST",
+        body: JSON.stringify({
+          baseUrl: "https://models.example.com/v1",
+          model: "diagram-model",
+          prompt: "Rename the first node",
+          diagram: current,
+          history: [],
+        }),
+      }),
+    );
+    const result = (await response.json()) as {
+      editMode: string;
+      diagram: { nodes: Array<{ data: { label: string } }> };
+    };
+
+    expect(response.status).toBe(200);
+    expect(result.editMode).toBe("operations");
+    expect(result.diagram.nodes[0].data.label).toBe("Renamed client");
+    expect(result.diagram.nodes[1].data.label).toBe(current.nodes[1].data.label);
+  });
 });
