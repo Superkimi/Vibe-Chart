@@ -38,4 +38,18 @@ describe("canonical diagram schema", () => {
     expect(safeId("Order Service v2")).toBe("Order_Service_v2");
     expect(safeId("123")).toBe("n_123");
   });
+
+  it("validates motion references against the graph", () => {
+    const invalid = structuredClone(starterDocuments[0]);
+    invalid.motion.steps = [
+      {
+        id: "missing-edge-step",
+        nodeIds: [invalid.nodes[0].id],
+        edgeIds: ["missing-edge"],
+        durationMs: 600,
+        caption: "",
+      },
+    ];
+    expect(() => validateDiagram(invalid)).toThrow(/missing edge/);
+  });
 });

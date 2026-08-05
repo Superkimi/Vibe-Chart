@@ -12,6 +12,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
   DiagramDocument,
+  DiagramMotion,
   DiagramKind,
   VibeEdge,
   VibeNodeData,
@@ -53,6 +54,7 @@ type VibeChartState = Snapshot & {
   updateSelectedEdge: (
     patch: Partial<Pick<VibeEdge, "label" | "type" | "animated">>,
   ) => void;
+  updateMotion: (patch: Partial<DiagramMotion>) => void;
   removeSelectedNode: () => void;
   removeSelectedEdge: () => void;
   autoLayout: (direction?: "LR" | "TB") => void;
@@ -320,6 +322,20 @@ export const useVibeChartStore = create<VibeChartState>()(
             ),
           }));
         }),
+      updateMotion: (patch) =>
+        set((state) =>
+          mutateActive(state, (document) => ({
+            ...document,
+            motion: {
+              enabled: document.motion?.enabled ?? false,
+              mode: document.motion?.mode ?? "trace",
+              durationMs: document.motion?.durationMs ?? 4800,
+              loop: document.motion?.loop ?? false,
+              steps: document.motion?.steps ?? [],
+              ...patch,
+            },
+          })),
+        ),
       removeSelectedNode: () =>
         set((state) => {
           if (!state.selectedNodeId) return state;

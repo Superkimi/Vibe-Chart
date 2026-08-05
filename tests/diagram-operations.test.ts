@@ -43,4 +43,32 @@ describe("AI diagram operations", () => {
       ]),
     ).toThrow("Node missing was not found");
   });
+
+  it("applies an explicit motion plan without changing graph ids", () => {
+    const current = structuredClone(starterDocuments[0]);
+    const next = applyDiagramOperations(current, [
+      {
+        op: "set_motion",
+        motion: {
+          enabled: true,
+          mode: "story",
+          durationMs: 3200,
+          loop: true,
+          steps: [
+            {
+              id: "intro",
+              nodeIds: [current.nodes[0].id],
+              edgeIds: [current.edges[0].id],
+              durationMs: 900,
+              caption: "Start",
+            },
+          ],
+        },
+      },
+    ]);
+
+    expect(next.motion.mode).toBe("story");
+    expect(next.motion.steps[0].edgeIds).toEqual([current.edges[0].id]);
+    expect(next.nodes.map((node) => node.id)).toEqual(current.nodes.map((node) => node.id));
+  });
 });

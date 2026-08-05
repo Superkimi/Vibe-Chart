@@ -17,7 +17,8 @@ source of truth.
 - Canonical typed graph validated before an AI edit reaches the canvas
 - Mermaid source and strict-mode rendered preview
 - Flowchart, ER, and sequence Mermaid source applied back to the visual canvas
-- draw.io XML, Mermaid, PNG, SVG, and Vibe JSON export
+- Schema-first motion plans with trace/story playback, reduced-motion support, and loop controls
+- draw.io XML, Mermaid, PNG, SVG, WebM, GIF, and Vibe JSON export
 - Automatic Dagre layout in left-to-right or top-to-bottom direction
 - Quality hints for overlaps and blocked edge routes after AI/layout changes
 - Undo, redo, duplication, local auto-save, light mode, and dark mode
@@ -33,11 +34,15 @@ AI conversation ─┐
 Visual editor ────┼─> validated Vibe JSON ─> canvas renderer
 Mermaid editor ──┘                         ├> Mermaid
                                            ├> draw.io XML
-                                           ├> PNG / SVG
+                                           ├> PNG / SVG / WebM / GIF
                                            └> local workspace history
 ```
 
-This keeps targeted edits stable and makes every output adapter deterministic.
+Motion is deliberately part of the canonical document rather than a canvas-only
+effect. A motion plan references stable node and edge IDs, so the same playback
+can be previewed, edited by AI, and rendered into WebM or GIF without drifting
+from the static diagram. This keeps targeted edits stable and makes every output
+adapter deterministic.
 See [docs/architecture.md](docs/architecture.md) for the design decisions.
 
 ## Local development
@@ -92,6 +97,8 @@ components/           canvas, directory, inspector, AI, code and toolbar UI
 lib/
   diagram-schema.ts   canonical Zod schema and validation
   diagram-code.ts     Mermaid and draw.io adapters
+  motion.ts           motion geometry, timelines, and frame interpolation
+  motion-export.ts    Canvas-based WebM and GIF renderers
   layout.ts           deterministic Dagre layout
   store.ts            local workspace, undo and redo
 tests/                schema, adapter and layout tests
