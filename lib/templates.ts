@@ -49,6 +49,13 @@ function makeDocument(
       type: "smoothstep",
       animated: false,
     })),
+    motion: {
+      enabled: true,
+      mode: "trace",
+      durationMs: 4800,
+      loop: false,
+      steps: [],
+    },
   };
 }
 

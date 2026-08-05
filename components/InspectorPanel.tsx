@@ -14,6 +14,7 @@ import {
 } from "@phosphor-icons/react";
 import { nodeShapes, type NodeShape } from "@/lib/diagram-schema";
 import { useI18n } from "@/lib/i18n";
+import { getMotion } from "@/lib/motion";
 import { selectActiveDocument, useVibeChartStore } from "@/lib/store";
 import { AiPanel } from "./AiPanel";
 
@@ -45,8 +46,10 @@ export function InspectorPanel() {
   const removeSelectedEdge = useVibeChartStore(
     (state) => state.removeSelectedEdge,
   );
+  const updateMotion = useVibeChartStore((state) => state.updateMotion);
   const selected = diagram.nodes.find((node) => node.id === selectedNodeId);
   const selectedEdge = diagram.edges.find((edge) => edge.id === selectedEdgeId);
+  const motion = getMotion(diagram);
 
   return (
     <aside className="inspector-panel" aria-label={t("diagramInspector")}>
@@ -230,6 +233,60 @@ export function InspectorPanel() {
               <p>{t("selectNodeHint")}</p>
             </div>
           )}
+          <section className="motion-settings" aria-label={t("motionSettings")}>
+            <div className="motion-settings-heading">
+              <div>
+                <strong>{t("motionSettings")}</strong>
+                <small>{t("motionPlanHint")}</small>
+              </div>
+              <label className="edge-toggle motion-enabled-toggle">
+                <input
+                  type="checkbox"
+                  checked={motion.enabled}
+                  onChange={(event) =>
+                    updateMotion({ enabled: event.target.checked })
+                  }
+                />
+                {t("motionEnabled")}
+              </label>
+            </div>
+            <label>
+              {t("motionMode")}
+              <select
+                value={motion.mode}
+                onChange={(event) =>
+                  updateMotion({ mode: event.target.value as "trace" | "story" })
+                }
+              >
+                <option value="trace">{t("motionTrace")}</option>
+                <option value="story">{t("motionStory")}</option>
+              </select>
+            </label>
+            <label>
+              <span className="motion-range-label">
+                {t("motionDuration")}
+                <output>{(motion.durationMs / 1000).toFixed(1)}s</output>
+              </span>
+              <input
+                type="range"
+                min="1.5"
+                max="12"
+                step="0.5"
+                value={motion.durationMs / 1000}
+                onChange={(event) =>
+                  updateMotion({ durationMs: Number(event.target.value) * 1000 })
+                }
+              />
+            </label>
+            <label className="edge-toggle">
+              <input
+                type="checkbox"
+                checked={motion.loop}
+                onChange={(event) => updateMotion({ loop: event.target.checked })}
+              />
+              {t("motionLoop")}
+            </label>
+          </section>
         </div>
       )}
     </aside>

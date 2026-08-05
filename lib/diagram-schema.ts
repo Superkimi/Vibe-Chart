@@ -44,6 +44,26 @@ export const diagramEdgeSchema = z.object({
   animated: z.boolean().default(false),
 });
 
+export const motionStepSchema = z
+  .object({
+    id: z.string().min(1).max(80),
+    nodeIds: z.array(z.string().min(1)).max(24).default([]),
+    edgeIds: z.array(z.string().min(1)).max(24).default([]),
+    durationMs: z.number().int().min(200).max(5000).default(800),
+    caption: z.string().max(160).optional().default(""),
+  })
+  .strict();
+
+export const diagramMotionSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    mode: z.enum(["trace", "story"]).default("trace"),
+    durationMs: z.number().int().min(500).max(15000).default(4800),
+    loop: z.boolean().default(false),
+    steps: z.array(motionStepSchema).max(32).default([]),
+  })
+  .strict();
+
 export const diagramDocumentSchema = z
   .object({
     id: z.string().min(1),
@@ -53,6 +73,13 @@ export const diagramDocumentSchema = z
     revision: z.number().int().nonnegative().default(0),
     nodes: z.array(diagramNodeSchema).min(1).max(120),
     edges: z.array(diagramEdgeSchema).max(240),
+    motion: diagramMotionSchema.default(() => ({
+      enabled: false,
+      mode: "trace" as const,
+      durationMs: 4800,
+      loop: false,
+      steps: [],
+    })),
     updatedAt: z.string().datetime(),
   })
   .superRefine((diagram, ctx) => {
@@ -85,6 +112,28 @@ export const diagramDocumentSchema = z
         });
       }
     }
+    const motionNodeIds = ids;
+    const motionEdgeIds = edgeIds;
+    for (const step of diagram.motion.steps) {
+      for (const nodeId of step.nodeIds) {
+        if (!motionNodeIds.has(nodeId)) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Motion step ${step.id} references missing node ${nodeId}`,
+            path: ["motion", "steps"],
+          });
+        }
+      }
+      for (const edgeId of step.edgeIds) {
+        if (!motionEdgeIds.has(edgeId)) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Motion step ${step.id} references missing edge ${edgeId}`,
+            path: ["motion", "steps"],
+          });
+        }
+      }
+    }
   });
 
 export type DiagramKind = (typeof diagramKinds)[number];
@@ -92,6 +141,8 @@ export type NodeShape = (typeof nodeShapes)[number];
 export type VibeNodeData = z.infer<typeof nodeDataSchema> & Record<string, unknown>;
 export type VibeNode = z.infer<typeof diagramNodeSchema>;
 export type VibeEdge = z.infer<typeof diagramEdgeSchema>;
+export type MotionStep = z.infer<typeof motionStepSchema>;
+export type DiagramMotion = z.infer<typeof diagramMotionSchema>;
 export type DiagramDocument = z.infer<typeof diagramDocumentSchema>;
 
 export function validateDiagram(input: unknown): DiagramDocument {

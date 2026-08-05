@@ -11,6 +11,8 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { DiagramNode } from "./DiagramNode";
+import { MotionControls, useMotionPlayback } from "./MotionControls";
+import { MotionPreviewLayer } from "./MotionPreviewLayer";
 import { selectActiveDocument, useVibeChartStore } from "@/lib/store";
 
 export function DiagramCanvas() {
@@ -21,6 +23,7 @@ export function DiagramCanvas() {
   const beginNodeDrag = useVibeChartStore((state) => state.beginNodeDrag);
   const selectNode = useVibeChartStore((state) => state.selectNode);
   const selectEdge = useVibeChartStore((state) => state.selectEdge);
+  const { progress, setProgress, playing, setPlaying } = useMotionPlayback(diagram);
   const nodeTypes = useMemo<NodeTypes>(
     () => ({ vibeNode: DiagramNode }),
     [],
@@ -45,6 +48,13 @@ export function DiagramCanvas() {
 
   return (
     <div className="canvas-surface" id="diagram-export-surface">
+      <MotionControls
+        diagram={diagram}
+        progress={progress}
+        onProgress={setProgress}
+        playing={playing}
+        onPlayingChange={setPlaying}
+      />
       <ReactFlow
         nodes={diagram.nodes}
         edges={displayEdges}
@@ -83,6 +93,7 @@ export function DiagramCanvas() {
           maskColor="var(--minimap-mask)"
         />
         <Controls showInteractive={false} />
+        <MotionPreviewLayer diagram={diagram} progress={progress} />
       </ReactFlow>
     </div>
   );

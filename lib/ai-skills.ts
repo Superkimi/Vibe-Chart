@@ -25,7 +25,7 @@ const kindSkills: Record<DiagramKind, string> = {
   sequence: `Sequence skill: arrange participants left-to-right and interactions in a readable top-to-bottom order. Keep labels short and preserve message direction in edge source/target order.`,
 };
 
-const motionSkill = `Motion skill: only set an edge's animated flag when the user explicitly asks for flow, pulse, or animated connectors. Animation is a presentation hint, not graph state; never return animation code, callbacks, arbitrary durations, or selectors.`;
+const motionSkill = `Motion skill: only add a motion plan when the user explicitly asks for animation, flow, pulse, a story, or a video/GIF. The motion plan is presentation metadata separate from graph topology. Use motion.enabled, mode (trace or story), a finite durationMs between 500 and 15000, and steps containing stable nodeIds/edgeIds, durationMs, and an optional caption. For a targeted edit use a set_motion operation. You may also set an edge's animated flag for a simple connector hint. Never return animation code, callbacks, arbitrary selectors, CSS, or executable JavaScript.`;
 
 function asksForMotion(prompt: string) {
   return /animate|animated|animation|motion|pulse|流动|动画|动效|脉冲/i.test(prompt);

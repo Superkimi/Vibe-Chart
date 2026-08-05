@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   diagramDocumentSchema,
   diagramEdgeSchema,
+  diagramMotionSchema,
   diagramNodeSchema,
   nodeDataSchema,
   type DiagramDocument,
@@ -24,6 +25,7 @@ const edgePatchSchema = z
 export const diagramOperationSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("set_title"), title: z.string().min(1).max(100) }),
   z.object({ op: z.literal("set_direction"), direction: z.enum(["LR", "TB"]) }),
+  z.object({ op: z.literal("set_motion"), motion: diagramMotionSchema }),
   z.object({
     op: z.literal("update_node"),
     id: z.string().min(1),
@@ -68,6 +70,10 @@ export function applyDiagramOperations(
     }
     if (operation.op === "set_direction") {
       next.direction = operation.direction;
+      continue;
+    }
+    if (operation.op === "set_motion") {
+      next.motion = structuredClone(operation.motion);
       continue;
     }
     if (operation.op === "update_node") {

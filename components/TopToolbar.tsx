@@ -11,6 +11,7 @@ import {
   Database,
   Diamond,
   DownloadSimple,
+  FilmStrip,
   FlowArrow,
   Image as ImageIcon,
   Moon,
@@ -24,6 +25,7 @@ import {
   toDrawio,
   toMermaid,
 } from "@/lib/diagram-code";
+import { exportMotion } from "@/lib/motion-export";
 import { selectActiveDocument, useVibeChartStore } from "@/lib/store";
 import { useI18n } from "@/lib/i18n";
 import type { NodeShape } from "@/lib/diagram-schema";
@@ -58,6 +60,7 @@ export function TopToolbar({
       : "light";
   });
   const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
   const exportDetails = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
@@ -117,6 +120,34 @@ export function TopToolbar({
     } finally {
       setExporting(false);
       exportDetails.current?.removeAttribute("open");
+    }
+  };
+
+  const motionExport = async (format: "webm" | "gif") => {
+    setExporting(true);
+    setExportError("");
+    let succeeded = false;
+    try {
+      const blob = await exportMotion(diagram, format, {
+        backgroundColor: theme === "dark" ? "#15131a" : "#fbfaff",
+        foregroundColor: theme === "dark" ? "#b2aabb" : "#716a7b",
+        accentColor: theme === "dark" ? "#a995dc" : "#6650a4",
+      });
+      const anchor = document.createElement("a");
+      anchor.href = URL.createObjectURL(blob);
+      anchor.download = `${extensionSafe(diagram.title)}.${format}`;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(anchor.href), 1000);
+      succeeded = true;
+    } catch (error) {
+      setExportError(
+        error instanceof Error && error.message.includes("unavailable")
+          ? t("motionExportUnavailable")
+          : t("motionExportFailed"),
+      );
+    } finally {
+      setExporting(false);
+      if (succeeded) exportDetails.current?.removeAttribute("open");
     }
   };
 
@@ -258,6 +289,25 @@ export function TopToolbar({
                 <small>{t("canonicalSchema")}</small>
               </span>
             </button>
+            <button type="button" onClick={() => void motionExport("webm")}>
+              <FilmStrip size={16} />
+              <span>
+                <strong>{t("webmVideo")}</strong>
+                <small>{t("motionExport")}</small>
+              </span>
+            </button>
+            <button type="button" onClick={() => void motionExport("gif")}>
+              <FilmStrip size={16} />
+              <span>
+                <strong>{t("gifImage")}</strong>
+                <small>{t("motionExport")}</small>
+              </span>
+            </button>
+            {exportError ? (
+              <p className="toolbar-export-error" role="status">
+                {exportError}
+              </p>
+            ) : null}
           </div>
         </details>
       </div>
