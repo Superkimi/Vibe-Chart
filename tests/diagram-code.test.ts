@@ -45,6 +45,17 @@ describe("diagram code adapters", () => {
     expect(parsed.edges[1].label).toBe("yes");
   });
 
+  it("exports and imports a nested mind map", () => {
+    const mindMap = starterDocuments.find((document) => document.kind === "mindmap")!;
+    const source = toMermaid(mindMap);
+    expect(source).toContain("mindmap");
+    expect(source).toContain("Product strategy");
+    const parsed = fromMermaid(source, mindMap);
+    expect(parsed.kind).toBe("mindmap");
+    expect(parsed.mindmap?.rootId).toBe(parsed.nodes[0].id);
+    expect(parsed.edges.length).toBeGreaterThan(0);
+  });
+
   it("applies code edits to existing node labels and shapes", () => {
     const parsed = fromMermaid(
       `flowchart LR
@@ -165,6 +176,14 @@ describe("diagram code adapters", () => {
       cell.getAttribute("id"),
     );
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("exports whiteboard elements as editable draw.io cells", () => {
+    const whiteboard = starterDocuments.find((document) => document.kind === "whiteboard")!;
+    const xml = toDrawio(whiteboard);
+    expect(xml).toContain("wb-title");
+    expect(xml).toContain("Product Brainstorm");
+    expect(xml).toContain("<mxGraphModel");
   });
 
   it("downloads text with a temporary object URL", () => {

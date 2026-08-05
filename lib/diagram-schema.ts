@@ -5,6 +5,8 @@ export const diagramKinds = [
   "flowchart",
   "er",
   "sequence",
+  "mindmap",
+  "whiteboard",
 ] as const;
 
 export const nodeShapes = [
@@ -44,6 +46,39 @@ export const diagramEdgeSchema = z.object({
   animated: z.boolean().default(false),
 });
 
+export const mindMapSchema = z
+  .object({
+    rootId: z.string().regex(/^[A-Za-z][A-Za-z0-9_-]*$/),
+    layout: z.enum(["tree", "right", "radial"]).default("right"),
+  })
+  .strict();
+
+export const whiteboardElementSchema = z
+  .object({
+    id: z.string().regex(/^[A-Za-z][A-Za-z0-9_-]*$/),
+    type: z.enum(["text", "sticky", "rectangle", "ellipse", "line"]),
+    position: z.object({
+      x: z.number().finite(),
+      y: z.number().finite(),
+    }),
+    size: z.object({
+      width: z.number().finite().positive().max(2000),
+      height: z.number().finite().positive().max(2000),
+    }),
+    text: z.string().max(2000).default(""),
+    tone: z
+      .enum(["lilac", "slate", "cyan", "amber", "rose"])
+      .default("lilac"),
+    rotation: z.number().finite().min(-360).max(360).default(0),
+  })
+  .strict();
+
+export const whiteboardSchema = z
+  .object({
+    elements: z.array(whiteboardElementSchema).max(300).default([]),
+  })
+  .strict();
+
 export const motionStepSchema = z
   .object({
     id: z.string().min(1).max(80),
@@ -66,13 +101,16 @@ export const diagramMotionSchema = z
 
 export const diagramDocumentSchema = z
   .object({
+    schemaVersion: z.number().int().positive().default(2),
     id: z.string().min(1),
     title: z.string().min(1).max(100),
     kind: z.enum(diagramKinds),
     direction: z.enum(["LR", "TB"]).default("LR"),
     revision: z.number().int().nonnegative().default(0),
-    nodes: z.array(diagramNodeSchema).min(1).max(120),
+    nodes: z.array(diagramNodeSchema).max(120),
     edges: z.array(diagramEdgeSchema).max(240),
+    mindmap: mindMapSchema.optional(),
+    whiteboard: whiteboardSchema.optional(),
     motion: diagramMotionSchema.default(() => ({
       enabled: false,
       mode: "trace" as const,
@@ -83,6 +121,53 @@ export const diagramDocumentSchema = z
     updatedAt: z.string().datetime(),
   })
   .superRefine((diagram, ctx) => {
+    if (diagram.kind === "whiteboard") {
+      if (diagram.nodes.length || diagram.edges.length) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Whiteboard documents cannot contain graph nodes or edges",
+          path: ["whiteboard"],
+        });
+      }
+      const elements = diagram.whiteboard?.elements ?? [];
+      const elementIds = new Set<string>();
+      for (const element of elements) {
+        if (elementIds.has(element.id)) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Duplicate whiteboard element id: ${element.id}`,
+            path: ["whiteboard", "elements"],
+          });
+        }
+        elementIds.add(element.id);
+      }
+      return;
+    }
+
+    if (!diagram.nodes.length) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Graph documents must contain at least one node",
+        path: ["nodes"],
+      });
+    }
+
+    if (diagram.kind === "mindmap") {
+      if (!diagram.mindmap) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Mind map documents require mindmap metadata",
+          path: ["mindmap"],
+        });
+      } else if (!diagram.nodes.some((node) => node.id === diagram.mindmap?.rootId)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Mind map root ${diagram.mindmap.rootId} was not found`,
+          path: ["mindmap", "rootId"],
+        });
+      }
+    }
+
     const ids = new Set<string>();
     const edgeIds = new Set<string>();
     for (const node of diagram.nodes) {
@@ -144,6 +229,12 @@ export type VibeEdge = z.infer<typeof diagramEdgeSchema>;
 export type MotionStep = z.infer<typeof motionStepSchema>;
 export type DiagramMotion = z.infer<typeof diagramMotionSchema>;
 export type DiagramDocument = z.infer<typeof diagramDocumentSchema>;
+export type MindMap = z.infer<typeof mindMapSchema>;
+export type WhiteboardElement = z.infer<typeof whiteboardElementSchema>;
+export type Whiteboard = z.infer<typeof whiteboardSchema>;
+
+export const isWhiteboardDocument = (diagram: DiagramDocument) =>
+  diagram.kind === "whiteboard";
 
 export function validateDiagram(input: unknown): DiagramDocument {
   return diagramDocumentSchema.parse(input);

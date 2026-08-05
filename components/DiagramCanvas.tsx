@@ -13,10 +13,19 @@ import "@xyflow/react/dist/style.css";
 import { DiagramNode } from "./DiagramNode";
 import { MotionControls, useMotionPlayback } from "./MotionControls";
 import { MotionPreviewLayer } from "./MotionPreviewLayer";
+import { WhiteboardCanvas } from "./WhiteboardCanvas";
 import { selectActiveDocument, useVibeChartStore } from "@/lib/store";
 
 export function DiagramCanvas() {
   const diagram = useVibeChartStore(selectActiveDocument);
+  return diagram.kind === "whiteboard" ? (
+    <WhiteboardCanvas />
+  ) : (
+    <SemanticDiagramCanvas diagram={diagram} />
+  );
+}
+
+function SemanticDiagramCanvas({ diagram }: { diagram: ReturnType<typeof selectActiveDocument> }) {
   const onNodesChange = useVibeChartStore((state) => state.onNodesChange);
   const onEdgesChange = useVibeChartStore((state) => state.onEdgesChange);
   const onConnect = useVibeChartStore((state) => state.onConnect);
@@ -47,7 +56,10 @@ export function DiagramCanvas() {
   );
 
   return (
-    <div className="canvas-surface" id="diagram-export-surface">
+    <div
+      className={`canvas-surface ${diagram.kind === "mindmap" ? "mindmap-canvas" : ""}`}
+      id="diagram-export-surface"
+    >
       <MotionControls
         diagram={diagram}
         progress={progress}

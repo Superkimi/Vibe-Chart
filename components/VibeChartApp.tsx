@@ -7,7 +7,7 @@ import { InspectorPanel } from "./InspectorPanel";
 import { TopToolbar } from "./TopToolbar";
 import { CodePanel } from "./CodePanel";
 import { useVibeChartStore } from "@/lib/store";
-import { I18nProvider, useI18n } from "@/lib/i18n";
+import { I18nProvider } from "@/lib/i18n";
 
 export function VibeChartApp() {
   return (
@@ -20,30 +20,25 @@ export function VibeChartApp() {
 function VibeChartShell() {
   const [view, setView] = useState<"canvas" | "code">("canvas");
   const hydrated = useVibeChartStore((state) => state.hydrated);
+  const diagram = useVibeChartStore((state) =>
+    state.documents.find((document) => document.id === state.activeId) ??
+    state.documents[0],
+  );
   const activeId = useVibeChartStore((state) => state.activeId);
   const setHydrated = useVibeChartStore((state) => state.setHydrated);
-  const { t } = useI18n();
-
   useEffect(() => {
     if (!hydrated) setHydrated(true);
   }, [hydrated, setHydrated]);
 
-  if (!hydrated) {
-    return (
-      <main className="app-loading">
-        <div className="loading-mark" />
-        <strong>{t("loading")}</strong>
-      </main>
-    );
-  }
+  const effectiveView = diagram.kind === "whiteboard" ? "canvas" : view;
 
   return (
     <main className="vibe-chart-shell">
       <DocumentSidebar />
       <section className="editor-column">
-        <TopToolbar view={view} onViewChange={setView} />
+        <TopToolbar view={effectiveView} onViewChange={setView} />
         <div className="workspace-stage">
-          {view === "canvas" ? (
+          {effectiveView === "canvas" ? (
             <DiagramCanvas />
           ) : (
             <CodePanel key={activeId} />

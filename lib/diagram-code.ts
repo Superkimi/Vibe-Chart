@@ -60,7 +60,39 @@ function sequenceMermaid(diagram: DiagramDocument) {
   return lines.join("\n");
 }
 
+function mindMapMermaid(diagram: DiagramDocument) {
+  const rootId = diagram.mindmap?.rootId ?? diagram.nodes[0]?.id;
+  const byId = new Map(diagram.nodes.map((node) => [node.id, node]));
+  const children = new Map<string, VibeEdge[]>();
+  diagram.edges.forEach((edge) => {
+    children.set(edge.source, [...(children.get(edge.source) ?? []), edge]);
+  });
+  const lines = ["mindmap"];
+  const root = rootId ? byId.get(rootId) : undefined;
+  if (!root) return lines.join("\n");
+  const cleanMindMapLabel = (label: string) =>
+    escapeMermaid(label).replace(/[()[\]{}:]/g, " ").replace(/\s+/g, " ").trim();
+  lines.push(`  root((${cleanMindMapLabel(root.data.label)}))`);
+  const visited = new Set([root.id]);
+  const visit = (parentId: string, depth: number) => {
+    for (const edge of children.get(parentId) ?? []) {
+      if (visited.has(edge.target)) continue;
+      visited.add(edge.target);
+      const node = byId.get(edge.target);
+      if (!node) continue;
+      lines.push(`${"  ".repeat(depth + 1)}${cleanMindMapLabel(node.data.label)}`);
+      visit(node.id, depth + 1);
+    }
+  };
+  visit(root.id, 0);
+  return lines.join("\n");
+}
+
 export function toMermaid(diagram: DiagramDocument) {
+  if (diagram.kind === "whiteboard") {
+    throw new Error("Whiteboard diagrams do not have a Mermaid representation.");
+  }
+  if (diagram.kind === "mindmap") return mindMapMermaid(diagram);
   if (diagram.kind === "er") return erMermaid(diagram);
   if (diagram.kind === "sequence") return sequenceMermaid(diagram);
 
@@ -71,6 +103,67 @@ export function toMermaid(diagram: DiagramDocument) {
     lines.push(`  ${edge.source} -->${label} ${edge.target}`);
   });
   return lines.join("\n");
+}
+
+function fromMindMapMermaid(lines: string[], current: DiagramDocument) {
+  const oldNodes = new Map(current.nodes.map((node) => [node.id, node]));
+  const nodes: VibeNode[] = [];
+  const edges: VibeEdge[] = [];
+  const stack: Array<{ indent: number; id: string }> = [];
+  const usedIds = new Set<string>();
+  let index = 0;
+
+  const uniqueId = (label: string) => {
+    const base = safeId(label, `branch-${index}`);
+    let id = base;
+    let suffix = 2;
+    while (usedIds.has(id)) id = `${base}-${suffix++}`;
+    usedIds.add(id);
+    return id;
+  };
+
+  for (const rawLine of lines.slice(1)) {
+    const indent = rawLine.match(/^\s*/)?.[0].length ?? 0;
+    const value = rawLine.trim();
+    if (!value) continue;
+    const rootMatch = /^root\(\((.*?)\)\)$/.exec(value);
+    const label = rootMatch?.[1] ?? value;
+    const id = rootMatch ? "root" : uniqueId(label);
+    const normalizedId = rootMatch && usedIds.has(id) ? uniqueId(label) : id;
+    usedIds.add(normalizedId);
+    nodes.push(
+      makeNode(
+        normalizedId,
+        label,
+        rootMatch ? "service" : "process",
+        index++,
+        oldNodes.get(normalizedId),
+      ),
+    );
+    while (stack.length && stack.at(-1)!.indent >= indent) stack.pop();
+    const parent = stack.at(-1);
+    if (parent) {
+      edges.push({
+        id: `edge-${parent.id}-${normalizedId}-${edges.length}`,
+        source: parent.id,
+        target: normalizedId,
+        label: "",
+        type: "smoothstep",
+        animated: false,
+      });
+    }
+    stack.push({ indent, id: normalizedId });
+  }
+  if (!nodes.length) throw new Error("No compatible Mermaid mind map nodes were found.");
+  return validateDiagram({
+    ...current,
+    kind: "mindmap",
+    direction: "LR",
+    nodes,
+    edges,
+    mindmap: { rootId: nodes[0].id, layout: "right" },
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 const shapeFromToken = (token: string): NodeShape => {
@@ -308,10 +401,10 @@ export function fromMermaid(
   source: string,
   current: DiagramDocument,
 ): DiagramDocument {
-  const lines = source
+  const rawLines = source
     .split(/\r?\n/)
-    .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("%%"));
+  const lines = rawLines.map((line) => line.trim());
   if (!lines.length) throw new Error("Mermaid source is empty.");
   if (/^erDiagram\b/.test(lines[0])) {
     return fromErMermaid(lines, current);
@@ -319,8 +412,11 @@ export function fromMermaid(
   if (/^sequenceDiagram\b/.test(lines[0])) {
     return fromSequenceMermaid(lines, current);
   }
+  if (/^mindmap\b/.test(lines[0])) {
+    return fromMindMapMermaid(rawLines, current);
+  }
   if (!/^flowchart|^graph/.test(lines[0])) {
-    throw new Error("Use flowchart, erDiagram, or sequenceDiagram syntax.");
+    throw new Error("Use flowchart, erDiagram, sequenceDiagram, or mindmap syntax.");
   }
 
   const direction = /\b(TB|TD|LR|RL|BT)\b/.exec(lines[0])?.[1];
@@ -417,6 +513,23 @@ const drawioStyle = (shape: NodeShape) => {
 };
 
 export function toDrawio(diagram: DiagramDocument) {
+  if (diagram.kind === "whiteboard") {
+    const cells = (diagram.whiteboard?.elements ?? [])
+      .map((element) => {
+        const style =
+          element.type === "ellipse"
+            ? "ellipse;whiteSpace=wrap;html=1;"
+            : element.type === "line"
+              ? "edgeStyle=none;strokeWidth=2;"
+              : element.type === "text"
+                ? "text;html=1;strokeColor=none;fillColor=none;"
+                : "rounded=1;whiteSpace=wrap;html=1;fillColor=#eee9f8;";
+        return `<mxCell id="${escapeXml(element.id)}" value="${escapeXml(element.text)}" style="${style}" vertex="${element.type === "line" ? "0" : "1"}" parent="1"><mxGeometry x="${Math.round(element.position.x)}" y="${Math.round(element.position.y)}" width="${Math.round(element.size.width)}" height="${Math.round(element.size.height)}" as="geometry"/></mxCell>`;
+      })
+      .join("");
+    const model = `<mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/>${cells}</root></mxGraphModel>`;
+    return `<mxfile host="Vibe Chart" modified="${new Date().toISOString()}" agent="Vibe Chart" version="1.0"><diagram id="${escapeXml(diagram.id)}" name="${escapeXml(diagram.title)}">${model}</diagram></mxfile>`;
+  }
   const cells = diagram.nodes
     .map(
       (node) =>

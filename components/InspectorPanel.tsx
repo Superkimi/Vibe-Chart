@@ -34,6 +34,9 @@ export function InspectorPanel() {
   const diagram = useVibeChartStore(selectActiveDocument);
   const selectedNodeId = useVibeChartStore((state) => state.selectedNodeId);
   const selectedEdgeId = useVibeChartStore((state) => state.selectedEdgeId);
+  const selectedWhiteboardElementId = useVibeChartStore(
+    (state) => state.selectedWhiteboardElementId,
+  );
   const updateSelectedNode = useVibeChartStore(
     (state) => state.updateSelectedNode,
   );
@@ -46,9 +49,18 @@ export function InspectorPanel() {
   const removeSelectedEdge = useVibeChartStore(
     (state) => state.removeSelectedEdge,
   );
+  const updateSelectedWhiteboardElement = useVibeChartStore(
+    (state) => state.updateSelectedWhiteboardElement,
+  );
+  const removeSelectedWhiteboardElement = useVibeChartStore(
+    (state) => state.removeSelectedWhiteboardElement,
+  );
   const updateMotion = useVibeChartStore((state) => state.updateMotion);
   const selected = diagram.nodes.find((node) => node.id === selectedNodeId);
   const selectedEdge = diagram.edges.find((edge) => edge.id === selectedEdgeId);
+  const selectedElement = diagram.whiteboard?.elements.find(
+    (element) => element.id === selectedWhiteboardElementId,
+  );
   const motion = getMotion(diagram);
 
   return (
@@ -76,7 +88,85 @@ export function InspectorPanel() {
         <AiPanel key={diagram.id} />
       ) : (
         <div className="properties-panel">
-          {selected ? (
+          {selectedElement ? (
+            <>
+              <header className="properties-title">
+                <div>
+                  <strong>{t("selectedElement")}</strong>
+                  <small>{selectedElement.id}</small>
+                </div>
+                <button
+                  type="button"
+                  className="icon-button danger"
+                  onClick={removeSelectedWhiteboardElement}
+                  aria-label={t("deleteSelectedElement")}
+                >
+                  <Trash size={16} />
+                </button>
+              </header>
+              <label>
+                {t("elementText")}
+                <textarea
+                  rows={5}
+                  value={selectedElement.text}
+                  onChange={(event) =>
+                    updateSelectedWhiteboardElement({ text: event.target.value })
+                  }
+                />
+              </label>
+              <fieldset>
+                <legend>{t("accent")}</legend>
+                <div className="tone-grid">
+                  {(["lilac", "slate", "cyan", "amber", "rose"] as const).map(
+                    (tone) => (
+                      <button
+                        type="button"
+                        aria-label={t("toneAccent", { tone: t(tone) })}
+                        title={t(tone)}
+                        key={tone}
+                        className={`tone-swatch tone-${tone} ${selectedElement.tone === tone ? "is-active" : ""}`}
+                        onClick={() => updateSelectedWhiteboardElement({ tone })}
+                      />
+                    ),
+                  )}
+                </div>
+              </fieldset>
+              <label>
+                {t("elementWidth")}
+                <input
+                  type="number"
+                  min="24"
+                  max="2000"
+                  value={Math.round(selectedElement.size.width)}
+                  onChange={(event) =>
+                    updateSelectedWhiteboardElement({
+                      size: {
+                        ...selectedElement.size,
+                        width: Math.max(24, Math.min(2000, Number(event.target.value) || 24)),
+                      },
+                    })
+                  }
+                />
+              </label>
+              <label>
+                {t("elementHeight")}
+                <input
+                  type="number"
+                  min="4"
+                  max="2000"
+                  value={Math.round(selectedElement.size.height)}
+                  onChange={(event) =>
+                    updateSelectedWhiteboardElement({
+                      size: {
+                        ...selectedElement.size,
+                        height: Math.max(4, Math.min(2000, Number(event.target.value) || 4)),
+                      },
+                    })
+                  }
+                />
+              </label>
+            </>
+          ) : selected ? (
             <>
               <header className="properties-title">
                 <div>
@@ -233,7 +323,7 @@ export function InspectorPanel() {
               <p>{t("selectNodeHint")}</p>
             </div>
           )}
-          <section className="motion-settings" aria-label={t("motionSettings")}>
+          {diagram.kind !== "whiteboard" ? <section className="motion-settings" aria-label={t("motionSettings")}>
             <div className="motion-settings-heading">
               <div>
                 <strong>{t("motionSettings")}</strong>
@@ -286,7 +376,7 @@ export function InspectorPanel() {
               />
               {t("motionLoop")}
             </label>
-          </section>
+          </section> : null}
         </div>
       )}
     </aside>
