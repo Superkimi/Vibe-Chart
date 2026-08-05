@@ -1,25 +1,26 @@
 # Vibe Chart
 
-Vibe Chart is an AI-native diagram studio for architecture maps, flowcharts,
-ER diagrams, and sequence diagrams. It combines direct manipulation with a
-diagram-aware conversation layer, while keeping a validated JSON graph as the
-source of truth.
+Vibe Chart is an AI-native visual thinking studio for architecture maps,
+flowcharts, ER diagrams, sequence diagrams, mind maps, and standalone
+whiteboards. It combines direct manipulation with a diagram-aware conversation
+layer, while keeping a validated JSON document as the source of truth.
 
 ![Vibe Chart social preview](public/og.png)
 
 ## What works
 
 - Direct node and edge editing on a zoomable canvas
-- Architecture, flowchart, ER, and sequence starting points
+- Architecture, flowchart, ER, sequence, mind map, and whiteboard starting points
+- A type switch and template catalog for structured diagrams and open-ended boards
 - AI edits through any OpenAI-compatible chat completion endpoint
 - Targeted AI edits can use validated ID-level operations, preserving unrelated graph content
 - Configurable endpoint, model, and API key stored for the browser tab only
 - Canonical typed graph validated before an AI edit reaches the canvas
 - Mermaid source and strict-mode rendered preview
-- Flowchart, ER, and sequence Mermaid source applied back to the visual canvas
+- Flowchart, ER, sequence, and mind map Mermaid source applied back to the visual canvas
 - Schema-first motion plans with trace/story playback, reduced-motion support, and loop controls
 - draw.io XML, Mermaid, PNG, SVG, WebM, GIF, and Vibe JSON export
-- Automatic Dagre layout in left-to-right or top-to-bottom direction
+- Automatic Dagre layout in left-to-right or top-to-bottom direction, plus deterministic mind-map tree/radial layout
 - Quality hints for overlaps and blocked edge routes after AI/layout changes
 - Undo, redo, duplication, local auto-save, light mode, and dark mode
 - Responsive workspace with a compact document rail
@@ -27,13 +28,15 @@ source of truth.
 ## Architecture
 
 Vibe Chart does not treat model-generated Mermaid or draw.io XML as the primary
-document. The canonical model is a small, typed graph:
+document. The canonical model is a small, typed workspace document. Graph modes
+use nodes and edges; the whiteboard mode uses independently positioned elements
+so loose workshop content is not forced into a graph:
 
 ```text
 AI conversation ─┐
-Visual editor ────┼─> validated Vibe JSON ─> canvas renderer
-Mermaid editor ──┘                         ├> Mermaid
-                                           ├> draw.io XML
+Visual editor ────┼─> validated Vibe JSON ─> graph / whiteboard renderer
+Mermaid editor ──┘                         ├> Mermaid (graph + mind map)
+                                           ├> draw.io XML (all modes)
                                            ├> PNG / SVG / WebM / GIF
                                            └> local workspace history
 ```
@@ -117,6 +120,12 @@ tests/                schema, adapter and layout tests
 - [Lieflat Charts](https://github.com/larashero3-dotcom/lieflat-charts)
   informed the principle that a diagram should communicate one clear reading
   before it adds visual density.
+- [Drawnix](https://github.com/plait-board/drawnix) and [Plait](https://github.com/plait-board/x-plait)
+  informed the standalone whiteboard boundary, tool palette, local persistence,
+  and converter-friendly architecture.
+- [tldraw](https://github.com/tldraw/tldraw) informed the separation between
+  shapes, tools, bindings, typed store scopes, migrations, and AI context. Its
+  SDK is not included because the production license is not MIT by default.
 
 No source code, icon set, or restricted prose is copied from these projects.
 Their licenses and trademarks remain with their respective owners.

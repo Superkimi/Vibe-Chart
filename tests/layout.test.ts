@@ -31,5 +31,13 @@ describe("diagram layout", () => {
       positions.get("impact")!.y,
     );
   });
-});
 
+  it("keeps mind map branches to the right of their root", () => {
+    const original = starterDocuments.find((document) => document.kind === "mindmap")!;
+    const result = layoutDiagram(original);
+    const root = result.nodes.find((node) => node.id === result.mindmap?.rootId)!;
+    const branch = result.nodes.find((node) => node.id === "product-users")!;
+    expect(branch.position.x).toBeGreaterThan(root.position.x);
+    expect(result.nodes.map((node) => node.id)).toEqual(original.nodes.map((node) => node.id));
+  });
+});

@@ -7,18 +7,23 @@ import {
   DotsThree,
   FlowArrow,
   GitBranch,
+  Graph,
+  Note,
   Plus,
   Trash,
 } from "@phosphor-icons/react";
 import type { DiagramKind } from "@/lib/diagram-schema";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { useVibeChartStore } from "@/lib/store";
+import { templateDefinitions } from "@/lib/templates";
 
 const kindIcon = {
   architecture: GitBranch,
   flowchart: FlowArrow,
   er: Database,
   sequence: ArrowsClockwise,
+  mindmap: Graph,
+  whiteboard: Note,
 };
 
 const createOptions: Array<{ kind: DiagramKind; labelKey: TranslationKey }> = [
@@ -26,6 +31,8 @@ const createOptions: Array<{ kind: DiagramKind; labelKey: TranslationKey }> = [
   { kind: "flowchart", labelKey: "flowchart" },
   { kind: "er", labelKey: "erDiagram" },
   { kind: "sequence", labelKey: "sequence" },
+  { kind: "mindmap", labelKey: "mindmap" },
+  { kind: "whiteboard", labelKey: "whiteboard" },
 ];
 
 export function DocumentSidebar() {
@@ -57,12 +64,32 @@ export function DocumentSidebar() {
           {t("newDiagram")}
         </summary>
         <div className="new-diagram-popover">
+          <div className="new-diagram-popover-section-label">{t("diagramTypes")}</div>
           {createOptions.map(({ kind, labelKey }) => {
             const Icon = kindIcon[kind];
             return (
               <button type="button" key={kind} onClick={() => addDocument(kind)}>
                 <Icon size={16} />
                 {t(labelKey)}
+              </button>
+            );
+          })}
+          <div className="new-diagram-popover-section-label">{t("templates")}</div>
+          {templateDefinitions.map((template) => {
+            const Icon = kindIcon[template.kind];
+            return (
+              <button
+                type="button"
+                className="template-option"
+                key={template.id}
+                onClick={() => addDocument(template.kind, template.id)}
+                title={t(template.descriptionKey as TranslationKey)}
+              >
+                <Icon size={16} />
+                <span>
+                  <strong>{t(template.labelKey as TranslationKey)}</strong>
+                  <small>{t(template.descriptionKey as TranslationKey)}</small>
+                </span>
               </button>
             );
           })}
@@ -88,7 +115,7 @@ export function DocumentSidebar() {
               <span>
                 <strong>{document.title}</strong>
                 <small>
-                  {t(document.kind === "er" ? "erDiagram" : document.kind)} · {t("nodes", { count: document.nodes.length })}
+                  {t(document.kind === "er" ? "erDiagram" : document.kind)} · {t("nodes", { count: document.kind === "whiteboard" ? document.whiteboard?.elements.length ?? 0 : document.nodes.length })}
                 </small>
               </span>
               <DotsThree size={17} aria-hidden="true" />

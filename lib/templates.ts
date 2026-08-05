@@ -1,4 +1,9 @@
-import type { DiagramDocument, DiagramKind, NodeShape } from "./diagram-schema";
+import type {
+  DiagramDocument,
+  DiagramKind,
+  NodeShape,
+  WhiteboardElement,
+} from "./diagram-schema";
 
 type SeedNode = [
   id: string,
@@ -18,6 +23,7 @@ function makeDocument(
   edges: Array<[string, string, string, string]>,
 ): DiagramDocument {
   return {
+    schemaVersion: 2,
     id,
     title,
     kind,
@@ -58,6 +64,50 @@ function makeDocument(
     },
   };
 }
+
+function makeMindMapDocument(
+  id: string,
+  title: string,
+  root: SeedNode,
+  branches: SeedNode[],
+  edges: Array<[string, string, string, string]>,
+): DiagramDocument {
+  return {
+    ...makeDocument(id, title, "mindmap", [root, ...branches], edges),
+    direction: "LR",
+    mindmap: { rootId: root[0], layout: "right" },
+  };
+}
+
+function makeWhiteboardDocument(
+  id: string,
+  title: string,
+  elements: WhiteboardElement[],
+): DiagramDocument {
+  return {
+    schemaVersion: 2,
+    id,
+    title,
+    kind: "whiteboard",
+    direction: "LR",
+    revision: 0,
+    nodes: [],
+    edges: [],
+    whiteboard: { elements },
+    motion: {
+      enabled: false,
+      mode: "trace",
+      durationMs: 4800,
+      loop: false,
+      steps: [],
+    },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+const whiteboardElement = (
+  element: Omit<WhiteboardElement, "rotation"> & { rotation?: number },
+): WhiteboardElement => ({ rotation: 0, ...element });
 
 export const starterDocuments: DiagramDocument[] = [
   makeDocument(
@@ -118,13 +168,155 @@ export const starterDocuments: DiagramDocument[] = [
       ["r3", "product", "line_item", "referenced by"],
     ],
   ),
+  makeDocument(
+    "checkout-sequence",
+    "Checkout Message Sequence",
+    "sequence",
+    [
+      ["customer", "Customer", "Browser or app", "actor", 50, 90],
+      ["checkout", "Checkout API", "Order boundary", "service", 330, 90],
+      ["payments", "Payment Provider", "External processor", "external", 610, 90],
+      ["orders-db", "Orders DB", "Durable state", "database", 890, 90],
+    ],
+    [
+      ["s1", "customer", "checkout", "submit order"],
+      ["s2", "checkout", "payments", "authorize"],
+      ["s3", "payments", "checkout", "approved"],
+      ["s4", "checkout", "orders-db", "persist order"],
+    ],
+  ),
+  makeMindMapDocument(
+    "product-mindmap",
+    "Product Strategy Mind Map",
+    ["product-root", "Product strategy", "Outcome and focus", "service", 80, 250],
+    [
+      ["product-users", "Users", "Who we serve", "actor", 380, 60],
+      ["product-problem", "Problem", "Pain worth solving", "decision", 380, 220],
+      ["product-solution", "Solution", "Smallest useful bet", "process", 380, 380],
+      ["product-research", "Research", "Evidence and feedback", "process", 700, 60],
+      ["product-metrics", "Metrics", "Signals of success", "database", 700, 380],
+    ],
+    [
+      ["m1", "product-root", "product-users", "for"],
+      ["m2", "product-root", "product-problem", "solves"],
+      ["m3", "product-root", "product-solution", "ships"],
+      ["m4", "product-users", "product-research", "learn"],
+      ["m5", "product-solution", "product-metrics", "measure"],
+    ],
+  ),
+  makeMindMapDocument(
+    "roadmap-mindmap",
+    "Quarterly Roadmap",
+    ["roadmap-root", "Q3 roadmap", "Themes and bets", "service", 80, 250],
+    [
+      ["roadmap-now", "Now", "Commit this month", "process", 380, 80],
+      ["roadmap-next", "Next", "Prepare the next sprint", "process", 380, 240],
+      ["roadmap-later", "Later", "Keep discovery open", "process", 380, 400],
+    ],
+    [
+      ["rmap1", "roadmap-root", "roadmap-now", "focus"],
+      ["rmap2", "roadmap-root", "roadmap-next", "sequence"],
+      ["rmap3", "roadmap-root", "roadmap-later", "explore"],
+    ],
+  ),
+  makeWhiteboardDocument("brainstorm-whiteboard", "Product Brainstorm", [
+    whiteboardElement({
+      id: "wb-title",
+      type: "sticky",
+      position: { x: 110, y: 100 },
+      size: { width: 260, height: 120 },
+      text: "Start with the user problem",
+      tone: "amber",
+    }),
+    whiteboardElement({
+      id: "wb-note",
+      type: "text",
+      position: { x: 430, y: 135 },
+      size: { width: 300, height: 80 },
+      text: "Use this board for loose ideas, sketches, and workshop notes.",
+      tone: "slate",
+    }),
+    whiteboardElement({
+      id: "wb-frame",
+      type: "rectangle",
+      position: { x: 90, y: 300 },
+      size: { width: 640, height: 260 },
+      text: "",
+      tone: "lilac",
+    }),
+  ]),
+  makeWhiteboardDocument("blank-whiteboard", "Untitled whiteboard", []),
 ];
 
-export const blankDocument = (kind: DiagramKind = "flowchart"): DiagramDocument =>
-  makeDocument(
-    `diagram-${Date.now()}`,
-    kind === "er" ? "Untitled ER diagram" : "Untitled diagram",
-    kind,
-    [["start", kind === "er" ? "ENTITY" : "Start here", "Double-click to rename", kind === "er" ? "entity" : "process", 120, 100, kind === "er" ? ["uuid id PK"] : []]],
-    [],
+export type TemplateDefinition = {
+  id: string;
+  kind: DiagramKind;
+  labelKey: string;
+  descriptionKey: string;
+  create: () => DiagramDocument;
+};
+
+const cloneWithNewIdentity = (
+  document: DiagramDocument,
+  preserveTitle = false,
+): DiagramDocument => ({
+  ...structuredClone(document),
+  id: `diagram-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  title: preserveTitle
+    ? document.title
+    : document.kind === "whiteboard"
+      ? "Untitled whiteboard"
+      : document.kind === "er"
+        ? "Untitled ER diagram"
+        : `Untitled ${document.kind}`,
+  revision: 0,
+  updatedAt: new Date().toISOString(),
+});
+
+export const templateDefinitions: TemplateDefinition[] = [
+  { id: "architecture-commerce", kind: "architecture", labelKey: "architectureTemplate", descriptionKey: "architectureTemplateHint", create: () => structuredClone(starterDocuments[0]) },
+  { id: "flowchart-incident", kind: "flowchart", labelKey: "flowchartTemplate", descriptionKey: "flowchartTemplateHint", create: () => structuredClone(starterDocuments[1]) },
+  { id: "er-commerce", kind: "er", labelKey: "erTemplate", descriptionKey: "erTemplateHint", create: () => structuredClone(starterDocuments[2]) },
+  { id: "sequence-checkout", kind: "sequence", labelKey: "sequenceTemplate", descriptionKey: "sequenceTemplateHint", create: () => structuredClone(starterDocuments[3]) },
+  { id: "mindmap-product", kind: "mindmap", labelKey: "productMindMapTemplate", descriptionKey: "productMindMapTemplateHint", create: () => structuredClone(starterDocuments[4]) },
+  { id: "mindmap-roadmap", kind: "mindmap", labelKey: "roadmapMindMapTemplate", descriptionKey: "roadmapMindMapTemplateHint", create: () => structuredClone(starterDocuments[5]) },
+  { id: "whiteboard-brainstorm", kind: "whiteboard", labelKey: "brainstormWhiteboardTemplate", descriptionKey: "brainstormWhiteboardTemplateHint", create: () => structuredClone(starterDocuments[6]) },
+  { id: "whiteboard-blank", kind: "whiteboard", labelKey: "blankWhiteboardTemplate", descriptionKey: "blankWhiteboardTemplateHint", create: () => structuredClone(starterDocuments[7]) },
+];
+
+export const blankDocument = (
+  kind: DiagramKind = "flowchart",
+  templateId?: string,
+): DiagramDocument => {
+  const template = templateId
+    ? templateDefinitions.find((candidate) => candidate.id === templateId)
+    : templateDefinitions.find((candidate) => candidate.kind === kind);
+  if (templateId && template) return cloneWithNewIdentity(template.create(), true);
+  if (kind === "whiteboard") {
+    return cloneWithNewIdentity(
+      makeWhiteboardDocument(`diagram-${Date.now()}`, "Untitled whiteboard", []),
+    );
+  }
+  if (kind === "mindmap") {
+    const root: SeedNode = [
+      "root",
+      "Main topic",
+      "Double-click to rename",
+      "service",
+      100,
+      220,
+    ];
+    return cloneWithNewIdentity(
+      makeMindMapDocument(`diagram-${Date.now()}`, "Untitled mind map", root, [], []),
+    );
+  }
+  return cloneWithNewIdentity(
+    makeDocument(
+      `diagram-${Date.now()}`,
+      kind === "er" ? "Untitled ER diagram" : `Untitled ${kind}`,
+      kind,
+      [["start", kind === "er" ? "ENTITY" : "Start here", "Double-click to rename", kind === "er" ? "entity" : "process", 120, 100, kind === "er" ? ["uuid id PK"] : []]],
+      [],
+    ),
   );
+};

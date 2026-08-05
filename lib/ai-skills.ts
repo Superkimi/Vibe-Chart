@@ -16,6 +16,8 @@ Stable graph rules:
 - Valid shapes: service, process, decision, database, external, actor, entity.
 - Valid tones: lilac, slate, cyan, amber, rose.
 - ER fields use "type name constraint" strings such as "uuid id PK".
+- Mind maps use a mindmap.rootId and graph edges from a parent branch to each child; preserve the root and keep branches short.
+- Whiteboards use whiteboard.elements instead of graph nodes. Each element has type text, sticky, rectangle, ellipse, or line, position, size, text, tone, and rotation. Use add/update/remove_whiteboard_element operations for targeted edits.
 - Never return markdown fences, comments, arbitrary keys, executable code, or provider-specific XML.`;
 
 const kindSkills: Record<DiagramKind, string> = {
@@ -23,6 +25,8 @@ const kindSkills: Record<DiagramKind, string> = {
   flowchart: `Flowchart skill: use process nodes for actions and decision nodes for branches. Prefer TB for decision-heavy flows. Every branch should have a concise edge label and a reachable end state.`,
   er: `ER skill: use entity nodes with compact fields and edges that describe relationships. Keep fields to identifiers and important constraints; do not turn every column into a separate node.`,
   sequence: `Sequence skill: arrange participants left-to-right and interactions in a readable top-to-bottom order. Keep labels short and preserve message direction in edge source/target order.`,
+  mindmap: `Mind map skill: keep one clear root, use two to four levels, and prefer short branch labels. Connect every branch to its parent and avoid cycles. Use the right layout unless the user asks for radial or tree placement.`,
+  whiteboard: `Whiteboard skill: treat the board as an open spatial surface for workshops. Use a small number of intentional sticky notes, text blocks, shapes, and lines. Preserve existing element ids and positions when editing nearby content; do not create graph nodes or edges.`,
 };
 
 const motionSkill = `Motion skill: only add a motion plan when the user explicitly asks for animation, flow, pulse, a story, or a video/GIF. The motion plan is presentation metadata separate from graph topology. Use motion.enabled, mode (trace or story), a finite durationMs between 500 and 15000, and steps containing stable nodeIds/edgeIds, durationMs, and an optional caption. For a targeted edit use a set_motion operation. You may also set an edge's animated flag for a simple connector hint. Never return animation code, callbacks, arbitrary selectors, CSS, or executable JavaScript.`;

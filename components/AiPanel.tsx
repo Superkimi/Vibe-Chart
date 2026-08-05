@@ -35,7 +35,7 @@ const defaultSettings: ModelSettings = {
   apiKey: "",
 };
 
-const quickPromptKeys: TranslationKey[] = [
+const graphQuickPromptKeys: TranslationKey[] = [
   "quickArchitecture",
   "quickFailure",
   "quickLayout",
@@ -44,6 +44,12 @@ const quickPromptKeys: TranslationKey[] = [
 export function AiPanel() {
   const { locale, t } = useI18n();
   const diagram = useVibeChartStore(selectActiveDocument);
+  const quickPromptKeys: TranslationKey[] =
+    diagram.kind === "mindmap"
+      ? ["quickMindmap", "quickLayout"]
+      : diagram.kind === "whiteboard"
+        ? ["quickWhiteboard"]
+        : graphQuickPromptKeys;
   const replaceDocumentIfUnchanged = useVibeChartStore(
     (state) => state.replaceDocumentIfUnchanged,
   );

@@ -28,7 +28,7 @@ import {
 import { exportMotion } from "@/lib/motion-export";
 import { selectActiveDocument, useVibeChartStore } from "@/lib/store";
 import { useI18n } from "@/lib/i18n";
-import type { NodeShape } from "@/lib/diagram-schema";
+import { diagramKinds, type NodeShape } from "@/lib/diagram-schema";
 
 type ViewMode = "canvas" | "code";
 
@@ -46,6 +46,8 @@ export function TopToolbar({
   const diagram = useVibeChartStore(selectActiveDocument);
   const renameDocument = useVibeChartStore((state) => state.renameDocument);
   const addNode = useVibeChartStore((state) => state.addNode);
+  const addMindMapBranch = useVibeChartStore((state) => state.addMindMapBranch);
+  const changeKind = useVibeChartStore((state) => state.changeKind);
   const autoLayout = useVibeChartStore((state) => state.autoLayout);
   const undo = useVibeChartStore((state) => state.undo);
   const redo = useVibeChartStore((state) => state.redo);
@@ -62,6 +64,8 @@ export function TopToolbar({
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
   const exportDetails = useRef<HTMLDetailsElement>(null);
+  const isWhiteboard = diagram.kind === "whiteboard";
+  const isMindMap = diagram.kind === "mindmap";
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -158,6 +162,13 @@ export function TopToolbar({
       ?.removeAttribute("open");
   };
 
+  const addMindMapBranchAndClose = () => {
+    addMindMapBranch();
+    document
+      .querySelector<HTMLDetailsElement>(".add-node-menu")
+      ?.removeAttribute("open");
+  };
+
   return (
     <header className="top-toolbar">
       <div className="document-title-area">
@@ -187,46 +198,72 @@ export function TopToolbar({
           <CirclesThreePlus size={15} />
           {t("canvas")}
         </button>
-        <button
-          type="button"
-          className={view === "code" ? "is-active" : ""}
-          onClick={() => onViewChange("code")}
-        >
-          <Code size={15} />
-          {t("code")}
-        </button>
+        {!isWhiteboard ? (
+          <button
+            type="button"
+            className={view === "code" ? "is-active" : ""}
+            onClick={() => onViewChange("code")}
+          >
+            <Code size={15} />
+            {t("code")}
+          </button>
+        ) : null}
       </div>
 
+      <label className="diagram-kind-picker">
+        <span>{t("diagramType")}</span>
+        <select
+          value={diagram.kind}
+          aria-label={t("diagramType")}
+          onChange={(event) => changeKind(event.target.value as (typeof diagramKinds)[number])}
+        >
+          {diagramKinds.map((kind) => (
+            <option value={kind} key={kind}>
+              {t(kind === "er" ? "erDiagram" : kind)}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <div className="toolbar-actions">
-        <details className="toolbar-menu add-node-menu">
+        {!isWhiteboard ? <details className="toolbar-menu add-node-menu">
           <summary>
             <CirclesThreePlus size={16} />
             {t("add")}
             <CaretDown size={12} />
           </summary>
           <div className="toolbar-popover">
-            <button type="button" onClick={() => addShape("process")}>
-              <Robot size={16} />
-              {t("process")}
-            </button>
-            <button type="button" onClick={() => addShape("decision")}>
-              <Diamond size={16} />
-              {t("decision")}
-            </button>
-            <button type="button" onClick={() => addShape("database")}>
-              <Database size={16} />
-              {t("database")}
-            </button>
-            <button type="button" onClick={() => addShape("service")}>
-              <FlowArrow size={16} />
-              {t("service")}
-            </button>
+            {isMindMap ? (
+              <button type="button" onClick={addMindMapBranchAndClose}>
+                <FlowArrow size={16} />
+                {t("newMindmapBranch")}
+              </button>
+            ) : (
+              <>
+                <button type="button" onClick={() => addShape("process")}>
+                  <Robot size={16} />
+                  {t("process")}
+                </button>
+                <button type="button" onClick={() => addShape("decision")}>
+                  <Diamond size={16} />
+                  {t("decision")}
+                </button>
+                <button type="button" onClick={() => addShape("database")}>
+                  <Database size={16} />
+                  {t("database")}
+                </button>
+                <button type="button" onClick={() => addShape("service")}>
+                  <FlowArrow size={16} />
+                  {t("service")}
+                </button>
+              </>
+            )}
           </div>
-        </details>
-        <button type="button" onClick={() => autoLayout()}>
+        </details> : null}
+        {!isWhiteboard ? <button type="button" onClick={() => autoLayout()}>
           <BracketsCurly size={16} />
           {t("arrange")}
-        </button>
+        </button> : null}
         <button
           type="button"
           className="theme-toggle"
@@ -275,13 +312,15 @@ export function TopToolbar({
                 <small>{t("editableXml")}</small>
               </span>
             </button>
-            <button type="button" onClick={() => textExport("mermaid")}>
-              <Code size={16} />
-              <span>
-                <strong>{t("mermaid")}</strong>
-                <small>{t("diagramAsCode")}</small>
-              </span>
-            </button>
+            {!isWhiteboard ? (
+              <button type="button" onClick={() => textExport("mermaid")}>
+                <Code size={16} />
+                <span>
+                  <strong>{t("mermaid")}</strong>
+                  <small>{t("diagramAsCode")}</small>
+                </span>
+              </button>
+            ) : null}
             <button type="button" onClick={() => textExport("json")}>
               <BracketsCurly size={16} />
               <span>
@@ -289,20 +328,24 @@ export function TopToolbar({
                 <small>{t("canonicalSchema")}</small>
               </span>
             </button>
-            <button type="button" onClick={() => void motionExport("webm")}>
-              <FilmStrip size={16} />
-              <span>
-                <strong>{t("webmVideo")}</strong>
-                <small>{t("motionExport")}</small>
-              </span>
-            </button>
-            <button type="button" onClick={() => void motionExport("gif")}>
-              <FilmStrip size={16} />
-              <span>
-                <strong>{t("gifImage")}</strong>
-                <small>{t("motionExport")}</small>
-              </span>
-            </button>
+            {!isWhiteboard ? (
+              <button type="button" onClick={() => void motionExport("webm")}>
+                <FilmStrip size={16} />
+                <span>
+                  <strong>{t("webmVideo")}</strong>
+                  <small>{t("motionExport")}</small>
+                </span>
+              </button>
+            ) : null}
+            {!isWhiteboard ? (
+              <button type="button" onClick={() => void motionExport("gif")}>
+                <FilmStrip size={16} />
+                <span>
+                  <strong>{t("gifImage")}</strong>
+                  <small>{t("motionExport")}</small>
+                </span>
+              </button>
+            ) : null}
             {exportError ? (
               <p className="toolbar-export-error" role="status">
                 {exportError}

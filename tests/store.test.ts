@@ -10,6 +10,7 @@ describe("workspace transactions", () => {
       activeId: starterDocuments[0].id,
       selectedNodeId: null,
       selectedEdgeId: null,
+      selectedWhiteboardElementId: null,
       past: [],
       future: [],
       hydrated: true,
@@ -100,5 +101,33 @@ describe("workspace transactions", () => {
     useVibeChartStore.getState().undo();
     expect(selectActiveDocument(useVibeChartStore.getState()).nodes[0].position)
       .toEqual(node.position);
+  });
+
+  it("adds and moves a whiteboard element through the shared history", () => {
+    const whiteboard = starterDocuments.find((document) => document.kind === "whiteboard")!;
+    useVibeChartStore.setState({
+      documents: [structuredClone(whiteboard)],
+      activeId: whiteboard.id,
+      selectedNodeId: null,
+      selectedEdgeId: null,
+      selectedWhiteboardElementId: null,
+      past: [],
+      future: [],
+      hydrated: true,
+    });
+    useVibeChartStore.getState().addWhiteboardElement("sticky");
+    const selected = useVibeChartStore.getState().selectedWhiteboardElementId!;
+    const before = selectActiveDocument(useVibeChartStore.getState()).whiteboard!.elements.find(
+      (element) => element.id === selected,
+    )!;
+    useVibeChartStore.getState().beginWhiteboardDrag();
+    useVibeChartStore.getState().moveWhiteboardElement({ x: 320, y: 180 });
+    expect(selectActiveDocument(useVibeChartStore.getState()).whiteboard!.elements.find(
+      (element) => element.id === selected,
+    )!.position).toEqual({ x: 320, y: 180 });
+    useVibeChartStore.getState().undo();
+    expect(selectActiveDocument(useVibeChartStore.getState()).whiteboard!.elements.find(
+      (element) => element.id === selected,
+    )!.position).toEqual(before.position);
   });
 });

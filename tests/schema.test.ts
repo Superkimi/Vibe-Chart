@@ -52,4 +52,23 @@ describe("canonical diagram schema", () => {
     ];
     expect(() => validateDiagram(invalid)).toThrow(/missing edge/);
   });
+
+  it("accepts mind maps and standalone whiteboards", () => {
+    const mindMap = starterDocuments.find((document) => document.kind === "mindmap")!;
+    const whiteboard = starterDocuments.find((document) => document.kind === "whiteboard")!;
+    expect(validateDiagram(mindMap).mindmap?.rootId).toBe("product-root");
+    expect(validateDiagram(whiteboard).whiteboard?.elements.length).toBeGreaterThan(0);
+    expect(validateDiagram({
+      ...whiteboard,
+      whiteboard: { elements: [] },
+    }).nodes).toEqual([]);
+  });
+
+  it("requires a valid mind map root", () => {
+    const invalid = structuredClone(
+      starterDocuments.find((document) => document.kind === "mindmap")!,
+    );
+    invalid.mindmap!.rootId = "missing";
+    expect(() => validateDiagram(invalid)).toThrow(/root missing/);
+  });
 });

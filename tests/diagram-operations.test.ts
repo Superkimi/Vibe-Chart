@@ -71,4 +71,30 @@ describe("AI diagram operations", () => {
     expect(next.motion.steps[0].edgeIds).toEqual([current.edges[0].id]);
     expect(next.nodes.map((node) => node.id)).toEqual(current.nodes.map((node) => node.id));
   });
+
+  it("edits whiteboard elements with ID-addressed operations", () => {
+    const current = structuredClone(
+      starterDocuments.find((document) => document.kind === "whiteboard")!,
+    );
+    const id = current.whiteboard!.elements[0].id;
+    const next = applyDiagramOperations(current, [
+      { op: "update_whiteboard_element", id, patch: { text: "Updated note" } },
+      {
+        op: "add_whiteboard_element",
+        element: {
+          id: "new-note",
+          type: "sticky",
+          position: { x: 20, y: 20 },
+          size: { width: 160, height: 100 },
+          text: "AI idea",
+          tone: "cyan",
+          rotation: 0,
+        },
+      },
+    ]);
+    expect(next.whiteboard!.elements.find((element) => element.id === id)?.text).toBe(
+      "Updated note",
+    );
+    expect(next.whiteboard!.elements.some((element) => element.id === "new-note")).toBe(true);
+  });
 });
