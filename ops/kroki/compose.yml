@@ -1,0 +1,17 @@
+services:
+  kroki:
+    image: yuzutech/kroki:0.32.0
+    restart: unless-stopped
+    environment:
+      KROKI_LISTEN: 0.0.0.0:8000
+      KROKI_SAFE_MODE: secure
+      KROKI_MAX_URI_LENGTH: 8192
+      KROKI_BODY_LIMIT: 100000
+      KROKI_COMMAND_TIMEOUT: 5s
+      KROKI_CONVERT_TIMEOUT: 20s
+    ports:
+      - "127.0.0.1:30248:8000"
+    mem_limit: 400m
+    cpus: 0.5
+    tmpfs:
+      - /tmp:exec

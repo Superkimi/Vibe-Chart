@@ -1672,6 +1672,34 @@ details > summary::-webkit-details-marker {
   background: var(--canvas);
 }
 
+.preview-heading {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.renderer-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-faint);
+  font: 600 9px "Geist Mono Variable", monospace;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.renderer-picker select {
+  max-width: 150px;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--panel-strong);
+  color: var(--text);
+  font: 600 10px "Geist Mono Variable", monospace;
+  text-transform: none;
+}
+
 .code-editor-pane > header,
 .mermaid-preview-pane > header {
   display: flex;
@@ -1777,6 +1805,106 @@ details > summary::-webkit-details-marker {
   max-width: 1050px;
   height: auto;
   max-height: 100%;
+}
+
+.kroki-preview {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--canvas);
+}
+
+.kroki-preview-toolbar {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-faint);
+  font-size: 9px;
+}
+
+.kroki-preview-toolbar > span {
+  overflow: hidden;
+  color: var(--text-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kroki-preview-toolbar > div {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.kroki-preview-toolbar button {
+  min-width: 35px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-strong);
+  color: var(--text-soft);
+  font: 600 9px "Geist Mono Variable", monospace;
+  cursor: pointer;
+}
+
+.kroki-preview-toolbar button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.kroki-preview-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.kroki-image-preview {
+  display: grid;
+  min-height: 0;
+  place-items: center;
+  padding: 28px;
+  overflow: auto;
+}
+
+.kroki-image-preview img {
+  display: block;
+  width: min(100%, 1080px);
+  max-height: 100%;
+  object-fit: contain;
+  background: var(--panel-strong);
+  box-shadow: 0 12px 35px color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.kroki-empty-preview {
+  min-height: 0;
+  padding: 28px;
+  overflow: auto;
+  color: var(--text-soft);
+}
+
+.kroki-empty-preview strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.kroki-empty-preview p {
+  margin: 8px 0 18px;
+  color: var(--danger);
+  font-size: 10px;
+}
+
+.kroki-empty-preview pre {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-strong) 82%, var(--bg));
+  color: var(--text-soft);
+  font: 500 11px/1.6 "Geist Mono Variable", monospace;
+  white-space: pre-wrap;
 }
 
 @keyframes loading-spin {

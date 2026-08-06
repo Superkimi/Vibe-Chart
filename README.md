@@ -17,6 +17,7 @@ layer, while keeping a validated JSON document as the source of truth.
 - Configurable endpoint, model, and API key stored for the browser tab only
 - Canonical typed graph validated before an AI edit reaches the canvas
 - Mermaid source and strict-mode rendered preview
+- Optional Kroki server-rendered preview through PlantUML, Graphviz, D2, and DBML adapters
 - Flowchart, ER, sequence, and mind map Mermaid source applied back to the visual canvas
 - Schema-first motion plans with trace/story playback, reduced-motion support, and loop controls
 - draw.io XML, Mermaid, PNG, SVG, WebM, GIF, and Vibe JSON export
@@ -37,6 +38,7 @@ AI conversation ─┐
 Visual editor ────┼─> validated Vibe JSON ─> graph / whiteboard renderer
 Mermaid editor ──┘                         ├> Mermaid (graph + mind map)
                                            ├> draw.io XML (all modes)
+                                           ├> optional Kroki renderers (SVG / PNG / PDF)
                                            ├> PNG / SVG / WebM / GIF
                                            └> local workspace history
 ```
@@ -80,6 +82,23 @@ Hosted deployments can set `VIBE_CHART_API_KEY` and
 Private network endpoints are rejected in production to reduce SSRF risk.
 Non-HTTPS public endpoints are rejected in all environments.
 
+### Optional Kroki renderer
+
+Set `VIBE_CHART_KROKI_BASE_URL` to a server-side, self-managed Kroki gateway to
+enable the advanced renderer picker in the code preview. The browser only calls
+the same-origin `/api/render/kroki` route; it never receives the gateway URL.
+
+```bash
+VIBE_CHART_KROKI_BASE_URL=http://127.0.0.1:30248
+VIBE_CHART_KROKI_ENGINES=plantuml,graphviz,d2,dbml
+VIBE_CHART_KROKI_VERSION=0.32.0
+VIBE_CHART_KROKI_TIMEOUT_MS=12000
+```
+
+The proxy enforces a source-size limit, renderer-specific output formats and
+options, a bounded timeout, private caching, and ETags. It deliberately does
+not accept arbitrary Kroki security parameters from the browser.
+
 ## Quality checks
 
 ```bash
@@ -96,10 +115,13 @@ npm run build
 ```text
 app/
   api/ai/chart/       OpenAI-compatible diagram planning endpoint
+  api/render/kroki/   Optional, bounded Kroki rendering proxy
 components/           canvas, directory, inspector, AI, code and toolbar UI
 lib/
   diagram-schema.ts   canonical Zod schema and validation
   diagram-code.ts     Mermaid and draw.io adapters
+  kroki.ts            renderer capability matrix and source adapters
+  kroki-client.ts     same-origin Kroki preview/download client
   motion.ts           motion geometry, timelines, and frame interpolation
   motion-export.ts    Canvas-based WebM and GIF renderers
   layout.ts           deterministic Dagre layout
