@@ -22,6 +22,7 @@ The design has three practical benefits:
 | React Flow | Direct graph manipulation, selection, handles, zoom, pan, and mini map |
 | Whiteboard surface | Pointer-based free positioning for open-ended workshop elements |
 | Mermaid | Portable code preview and interchange for graphs and mind maps |
+| Kroki adapter layer | Optional server-rendered PlantUML, Graphviz, D2, and DBML previews/exports |
 | draw.io adapter | Editable `mxGraphModel` XML export for every workspace mode |
 | html-to-image | PNG and SVG capture of the current canvas |
 | Dagre | Deterministic automatic layout |
@@ -71,6 +72,31 @@ such as sequence loops, notes, arbitrary subgraphs, or free-form whiteboard
 strokes—remain previewable or are represented by the whiteboard element model
 instead of being silently coerced into a graph.
 
+## Optional Kroki rendering
+
+Kroki is an output boundary, not a second document model. The canonical
+`DiagramDocument` is converted into a small allowlisted source adapter before
+the server proxy sends it to a self-managed Kroki gateway:
+
+```text
+DiagramDocument -> PlantUML / Graphviz / D2 / DBML source
+                -> /api/render/kroki
+                -> self-managed Kroki -> SVG / PNG / PDF
+```
+
+The proxy keeps the browser unaware of the gateway URL and validates the
+renderer, format, options, source length, and timeout. It only permits safe
+engine-specific options; browser input cannot override security controls such
+as external imports or Mermaid resource limits. ETags include the configured
+Kroki version, engine, format, source, and options, while responses use private
+short-lived caching so diagrams are not made public by an intermediary cache.
+
+The first adapter set is intentionally narrow: PlantUML and Graphviz cover
+architecture/flow/sequence/ER output, D2 adds a modern code-oriented renderer,
+and DBML is limited to ER diagrams. This keeps the deployment small and lets
+the UI expose an honest capability matrix instead of pretending every Kroki
+companion container is installed.
+
 ## Workspace modes and templates
 
 The type picker changes the current workspace between the six supported modes.
@@ -92,6 +118,10 @@ the versioned envelope without discarding valid work.
 ## Security boundaries
 
 - Mermaid renders with `securityLevel: "strict"`.
+- Kroki is optional and must be self-managed; the browser never calls the public
+  Kroki service directly.
+- The Kroki proxy rejects unknown options and caps source size, timeout, and
+  output formats per renderer.
 - Public model endpoints require HTTPS.
 - Production rejects localhost and private network ranges.
 - Model response text is parsed and validated before use.
